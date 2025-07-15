@@ -1,0 +1,24 @@
+{
+  "network": {
+    "name": "MediVote Network",
+    "network_id": "medivote_mainnet_v1",
+    "node_timeout": 300,
+    "discovery_interval": 60
+  },
+  "api": {
+    "enabled": true,
+    "port": 8083,
+    "rate_limit": 100
+  },
+  "storage": {
+    "data_dir": "network_data",
+    "nodes_file": "nodes.json"
+  },
+  "security": {
+    "trusted_ips": ["127.0.0.1", "localhost", "::1"],
+    "admin_ips": ["127.0.0.1", "localhost"],
+    "rate_limit_window": 60,
+    "max_requests_per_window": 100,
+    "enable_security_logging": true
+  }
+}

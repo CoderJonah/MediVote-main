@@ -55,7 +55,55 @@ class Settings(BaseModel):
     MAIN_APP: str = "backend/main.py"
 
 
+class SecurityConfig(BaseModel):
+    """Security configuration settings"""
+    
+    # Rate limiting
+    MAX_FAILED_ATTEMPTS: int = 5
+    SESSION_TIMEOUT_MINUTES: int = 30
+    
+    # Cryptographic settings
+    KEY_SIZE: int = 2048
+    HASH_ALGORITHM: str = "SHA256"
+    
+    # Authentication settings
+    PASSWORD_MIN_LENGTH: int = 8
+    REQUIRE_SPECIAL_CHARS: bool = True
+    REQUIRE_NUMBERS: bool = True
+    REQUIRE_UPPERCASE: bool = True
+
+
+class CryptoConfig(BaseModel):
+    """Cryptographic configuration settings"""
+    
+    # Blind signature settings
+    BLIND_SIGNATURE_KEY_SIZE: int = 2048
+    BLIND_SIGNATURE_AUTHORITY_ID: str = "medivote_authority_001"
+    
+    # Homomorphic encryption settings
+    HOMOMORPHIC_KEY_SIZE: int = 2048
+    THRESHOLD_DECRYPTION: int = 3
+    TOTAL_TRUSTEES: int = 5
+    
+    # Zero-knowledge proof settings
+    ZK_CIRCUIT_PATH: str = "./circuits"
+    ZK_PROOF_PROTOCOL: str = "groth16"
+    ZK_CURVE: str = "bn128"
+
+
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance"""
     return Settings()
+
+
+@lru_cache()
+def get_security_config() -> SecurityConfig:
+    """Get cached security configuration"""
+    return SecurityConfig()
+
+
+@lru_cache()
+def get_crypto_config() -> CryptoConfig:
+    """Get cached cryptographic configuration"""
+    return CryptoConfig()

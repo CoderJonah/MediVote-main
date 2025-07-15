@@ -125,11 +125,11 @@ async function handleBallotCreation(event) {
     
     try {
         const ballotData = {
-            title: formData.get('ballotTitle'),
+            name: formData.get('ballotTitle'),
             description: formData.get('ballotDescription'),
             candidates: candidates,
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString()
+            start_date: startTime.toISOString(),
+            end_date: endTime.toISOString()
         };
         
         const response = await MediVoteAPI.post('/api/admin/create-ballot', ballotData);
@@ -177,7 +177,7 @@ function displayBallotCreationSuccess(response) {
                 </div>
                 <div class="detail-item">
                     <strong>Title:</strong>
-                    <span>${response.title}</span>
+                    <span>${response.name}</span>
                 </div>
                 <div class="detail-item">
                     <strong>Status:</strong>
@@ -185,11 +185,11 @@ function displayBallotCreationSuccess(response) {
                 </div>
                 <div class="detail-item">
                     <strong>Voting Period:</strong>
-                    <span>${formatDateTime(response.start_time)} - ${formatDateTime(response.end_time)}</span>
+                    <span>${formatDateTime(response.start_date)} - ${formatDateTime(response.end_date)}</span>
                 </div>
                 <div class="detail-item">
                     <strong>Candidates:</strong>
-                    <span>${response.candidates_count} candidates</span>
+                    <span>${response.candidates ? response.candidates.length : 0} candidates</span>
                 </div>
             </div>
         </div>

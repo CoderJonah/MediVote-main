@@ -1,22 +1,34 @@
 """
-Blockchain Service for MediVote
-Handles blockchain interactions, smart contracts, and distributed ledger operations
+Local Blockchain Service for MediVote
+Handles local blockchain operations, smart contracts, and distributed ledger operations
 """
 
 import json
 import asyncio
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass
-from web3 import Web3
-from web3.contract import Contract
-from eth_account import Account
-from loguru import logger
 import hashlib
 import time
+import threading
+from typing import Dict, List, Optional, Any, Tuple
+from dataclasses import dataclass, asdict
+from datetime import datetime
+from pathlib import Path
+import secrets
+from loguru import logger
 
-from core.config import get_settings
+from config import get_settings
 
 settings = get_settings()
+
+
+@dataclass
+class Block:
+    """Blockchain block structure"""
+    index: int
+    timestamp: float
+    transactions: List[Dict[str, Any]]
+    previous_hash: str
+    hash: str
+    nonce: int = 0
 
 
 @dataclass
@@ -41,185 +53,209 @@ class VoteTransaction:
     voter_proof: str
 
 
+class LocalBlockchain:
+    """Local blockchain implementation"""
+    
+    def __init__(self, data_dir: str = "./blockchain_data"):
+        self.chain: List[Block] = []
+        self.pending_transactions: List[Dict[str, Any]] = []
+        self.nodes: List[str] = []
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(exist_ok=True)
+        self.difficulty = 4  # Number of leading zeros required
+        self.block_time = 15  # Target block time in seconds
+        self.mining_thread: Optional[threading.Thread] = None
+        self.is_mining = False
+        
+        # Load existing blockchain
+        self._load_blockchain()
+        
+        # Create genesis block if chain is empty
+        if len(self.chain) == 0:
+            self._create_genesis_block()
+    
+    def _load_blockchain(self):
+        """Load blockchain from disk"""
+        chain_file = self.data_dir / "blockchain.json"
+        if chain_file.exists():
+            try:
+                with open(chain_file, 'r') as f:
+                    chain_data = json.load(f)
+                    self.chain = [Block(**block) for block in chain_data]
+                logger.info(f"Loaded blockchain with {len(self.chain)} blocks")
+            except Exception as e:
+                logger.error(f"Failed to load blockchain: {e}")
+    
+    def _save_blockchain(self):
+        """Save blockchain to disk"""
+        chain_file = self.data_dir / "blockchain.json"
+        try:
+            with open(chain_file, 'w') as f:
+                json.dump([asdict(block) for block in self.chain], f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save blockchain: {e}")
+    
+    def _create_genesis_block(self):
+        """Create the genesis block"""
+        genesis_block = Block(
+            index=0,
+            timestamp=time.time(),
+            transactions=[],
+            previous_hash="0" * 64,
+            hash="",
+            nonce=0
+        )
+        genesis_block.hash = self._calculate_hash(genesis_block)
+        self.chain.append(genesis_block)
+        self._save_blockchain()
+        logger.info("Created genesis block")
+    
+    def _calculate_hash(self, block: Block) -> str:
+        """Calculate hash of a block"""
+        block_string = json.dumps(asdict(block), sort_keys=True)
+        return hashlib.sha256(block_string.encode()).hexdigest()
+    
+    def _get_latest_block(self) -> Block:
+        """Get the latest block in the chain"""
+        return self.chain[-1]
+    
+    def _mine_block(self, transactions: List[Dict[str, Any]]) -> Block:
+        """Mine a new block with the given transactions"""
+        previous_block = self._get_latest_block()
+        new_block = Block(
+            index=previous_block.index + 1,
+            timestamp=time.time(),
+            transactions=transactions,
+            previous_hash=previous_block.hash,
+            hash="",
+            nonce=0
+        )
+        
+        # Mine the block
+        while True:
+            new_block.hash = self._calculate_hash(new_block)
+            if new_block.hash.startswith("0" * self.difficulty):
+                break
+            new_block.nonce += 1
+        
+        return new_block
+    
+    def add_transaction(self, transaction: Dict[str, Any]) -> str:
+        """Add a transaction to the pending transactions"""
+        transaction_hash = hashlib.sha256(
+            json.dumps(transaction, sort_keys=True).encode()
+        ).hexdigest()
+        
+        transaction["hash"] = transaction_hash
+        transaction["timestamp"] = int(time.time())
+        
+        self.pending_transactions.append(transaction)
+        logger.info(f"Added transaction: {transaction_hash}")
+        
+        return transaction_hash
+    
+    def mine_pending_transactions(self) -> Optional[Block]:
+        """Mine pending transactions into a new block"""
+        if not self.pending_transactions:
+            return None
+        
+        # Create new block
+        new_block = self._mine_block(self.pending_transactions)
+        
+        # Add block to chain
+        self.chain.append(new_block)
+        
+        # Clear pending transactions
+        self.pending_transactions = []
+        
+        # Save blockchain
+        self._save_blockchain()
+        
+        logger.info(f"Mined block {new_block.index} with {len(new_block.transactions)} transactions")
+        return new_block
+    
+    def is_chain_valid(self) -> bool:
+        """Check if the blockchain is valid"""
+        for i in range(1, len(self.chain)):
+            current_block = self.chain[i]
+            previous_block = self.chain[i - 1]
+            
+            # Check if current block hash is valid
+            if current_block.hash != self._calculate_hash(current_block):
+                return False
+            
+            # Check if previous block hash is correct
+            if current_block.previous_hash != previous_block.hash:
+                return False
+        
+        return True
+    
+    def get_balance(self, address: str) -> int:
+        """Get balance of an address (simplified)"""
+        balance = 0
+        for block in self.chain:
+            for transaction in block.transactions:
+                if transaction.get("to") == address:
+                    balance += transaction.get("amount", 0)
+                if transaction.get("from") == address:
+                    balance -= transaction.get("amount", 0)
+        return balance
+    
+    def get_transactions_by_election(self, election_id: str) -> List[Dict[str, Any]]:
+        """Get all transactions for a specific election"""
+        transactions = []
+        for block in self.chain:
+            for transaction in block.transactions:
+                if transaction.get("election_id") == election_id:
+                    transactions.append(transaction)
+        return transactions
+    
+    def start_mining(self):
+        """Start background mining process"""
+        if not self.is_mining:
+            self.is_mining = True
+            self.mining_thread = threading.Thread(target=self._mining_worker, daemon=True)
+            self.mining_thread.start()
+            logger.info("Started background mining")
+    
+    def stop_mining(self):
+        """Stop background mining process"""
+        self.is_mining = False
+        if self.mining_thread:
+            self.mining_thread.join(timeout=1)
+        logger.info("Stopped background mining")
+    
+    def _mining_worker(self):
+        """Background mining worker"""
+        while self.is_mining:
+            if self.pending_transactions:
+                self.mine_pending_transactions()
+            time.sleep(self.block_time)
+
+
 class BlockchainService:
     """Service for blockchain interactions"""
     
     def __init__(self):
-        self.w3: Optional[Web3] = None
-        self.account: Optional[Account] = None
-        self.election_contract: Optional[Contract] = None
-        self.ballot_contract: Optional[Contract] = None
+        self.blockchain: Optional[LocalBlockchain] = None
         self.connected = False
-        self.network_id = None
+        self.network_id = 1337  # Local development chain ID
         
     async def initialize(self):
         """Initialize blockchain connection and contracts"""
         try:
-            # Connect to blockchain network
-            if settings.BLOCKCHAIN_RPC_URL:
-                self.w3 = Web3(Web3.HTTPProvider(settings.BLOCKCHAIN_RPC_URL))
-                
-                # Check connection
-                if self.w3.is_connected():
-                    self.network_id = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: self.w3.eth.chain_id
-                    )
-                    logger.info(f"Connected to blockchain network (Chain ID: {self.network_id})")
-                else:
-                    raise ConnectionError("Failed to connect to blockchain network")
-            else:
-                # Mock blockchain for testing
-                logger.info("Using mock blockchain for development")
-                await self._initialize_mock_blockchain()
+            # Initialize local blockchain
+            self.blockchain = LocalBlockchain()
             
-            # Initialize account
-            if settings.BLOCKCHAIN_PRIVATE_KEY:
-                self.account = Account.from_key(settings.BLOCKCHAIN_PRIVATE_KEY)
-                logger.info(f"Blockchain account initialized: {self.account.address}")
-            
-            # Deploy or connect to smart contracts
-            await self._initialize_contracts()
+            # Start mining
+            self.blockchain.start_mining()
             
             self.connected = True
-            logger.info("Blockchain service initialized successfully")
+            logger.info("Local blockchain service initialized successfully")
             
         except Exception as e:
             logger.error(f"Blockchain initialization failed: {e}")
-            if settings.MOCK_BLOCKCHAIN:
-                await self._initialize_mock_blockchain()
-                self.connected = True
-                logger.info("Fallback to mock blockchain successful")
-            else:
-                raise
-    
-    async def _initialize_mock_blockchain(self):
-        """Initialize mock blockchain for development"""
-        self.w3 = None
-        self.network_id = 1337  # Local development chain ID
-        self.account = None
-        logger.info("Mock blockchain initialized")
-    
-    async def _initialize_contracts(self):
-        """Initialize smart contracts"""
-        try:
-            # Election bulletin board contract
-            election_abi = self._get_election_contract_abi()
-            election_bytecode = self._get_election_contract_bytecode()
-            
-            if settings.CONTRACT_ADDRESS:
-                # Connect to existing contract
-                if self.w3:
-                    self.election_contract = self.w3.eth.contract(
-                        address=settings.CONTRACT_ADDRESS,
-                        abi=election_abi
-                    )
-                    logger.info(f"Connected to existing election contract: {settings.CONTRACT_ADDRESS}")
-            else:
-                # Deploy new contract
-                contract_address = await self._deploy_contract(election_abi, election_bytecode)
-                if contract_address and self.w3:
-                    self.election_contract = self.w3.eth.contract(
-                        address=contract_address,
-                        abi=election_abi
-                    )
-                    logger.info(f"Deployed new election contract: {contract_address}")
-                
-        except Exception as e:
-            logger.error(f"Contract initialization failed: {e}")
-            # Continue with mock contracts for development
-            self.election_contract = None
-    
-    async def _deploy_contract(self, abi: List[Dict], bytecode: str) -> Optional[str]:
-        """Deploy smart contract to blockchain"""
-        try:
-            if not self.w3 or not self.account:
-                return None
-            
-            contract = self.w3.eth.contract(abi=abi, bytecode=bytecode)
-            
-            # Build transaction
-            transaction = contract.constructor().build_transaction({
-                'from': self.account.address,
-                'nonce': self.w3.eth.get_transaction_count(self.account.address),
-                'gas': 3000000,
-                'gasPrice': self.w3.to_wei('20', 'gwei'),
-            })
-            
-            # Sign and send transaction
-            signed_txn = self.account.sign_transaction(transaction)
-            tx_hash = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-            
-            # Wait for transaction receipt
-            tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-            
-            if tx_receipt.status == 1:
-                return tx_receipt.contractAddress
-            else:
-                raise Exception("Contract deployment failed")
-                
-        except Exception as e:
-            logger.error(f"Contract deployment error: {e}")
-            return None
-    
-    def _get_election_contract_abi(self) -> List[Dict]:
-        """Get Election contract ABI"""
-        return [
-            {
-                "inputs": [],
-                "name": "ElectionBulletinBoard",
-                "type": "constructor"
-            },
-            {
-                "inputs": [
-                    {"name": "_electionId", "type": "string"},
-                    {"name": "_name", "type": "string"},
-                    {"name": "_publicKey", "type": "string"}
-                ],
-                "name": "createElection",
-                "outputs": [],
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"name": "_electionId", "type": "string"},
-                    {"name": "_encryptedVote", "type": "string"},
-                    {"name": "_blindSignature", "type": "string"}
-                ],
-                "name": "postBallot",
-                "outputs": [],
-                "type": "function"
-            },
-            {
-                "inputs": [{"name": "_electionId", "type": "string"}],
-                "name": "getBallots",
-                "outputs": [{"name": "", "type": "string[]"}],
-                "type": "function"
-            },
-            {
-                "inputs": [{"name": "_electionId", "type": "string"}],
-                "name": "getElectionInfo",
-                "outputs": [
-                    {"name": "name", "type": "string"},
-                    {"name": "publicKey", "type": "string"},
-                    {"name": "ballotCount", "type": "uint256"}
-                ],
-                "type": "function"
-            },
-            {
-                "anonymous": False,
-                "inputs": [
-                    {"indexed": True, "name": "electionId", "type": "string"},
-                    {"indexed": False, "name": "voteHash", "type": "string"}
-                ],
-                "name": "BallotPosted",
-                "type": "event"
-            }
-        ]
-    
-    def _get_election_contract_bytecode(self) -> str:
-        """Get Election contract bytecode (simplified)"""
-        # In a real implementation, this would be the compiled Solidity bytecode
-        return "0x608060405234801561001057600080fd5b50..."  # Truncated for brevity
+            raise
     
     async def create_election(
         self,
@@ -229,45 +265,34 @@ class BlockchainService:
     ) -> Optional[BlockchainTransaction]:
         """Create a new election on the blockchain"""
         try:
-            if not self.connected:
-                await self.initialize()
+            if not self.blockchain:
+                return None
             
-            if self.election_contract and self.w3 and self.account:
-                # Build transaction
-                function = self.election_contract.functions.createElection(
-                    election_id,
-                    name,
-                    public_key
-                )
-                
-                transaction = function.build_transaction({
-                    'from': self.account.address,
-                    'nonce': self.w3.eth.get_transaction_count(self.account.address),
-                    'gas': 500000,
-                    'gasPrice': self.w3.to_wei('20', 'gwei'),
-                })
-                
-                # Sign and send
-                signed_txn = self.account.sign_transaction(transaction)
-                tx_hash = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-                
-                # Wait for confirmation
-                tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-                
-                return BlockchainTransaction(
-                    transaction_hash=tx_hash.hex(),
-                    block_number=tx_receipt.blockNumber,
-                    block_hash=tx_receipt.blockHash.hex(),
-                    gas_used=tx_receipt.gasUsed,
-                    status="success" if tx_receipt.status == 1 else "failed",
-                    timestamp=int(time.time())
-                )
-            else:
-                # Mock transaction for development
-                return await self._create_mock_transaction("create_election")
-                
+            transaction = {
+                "type": "create_election",
+                "election_id": election_id,
+                "name": name,
+                "public_key": public_key,
+                "timestamp": int(time.time())
+            }
+            
+            transaction_hash = self.blockchain.add_transaction(transaction)
+            
+            # Create transaction receipt
+            receipt = BlockchainTransaction(
+                transaction_hash=transaction_hash,
+                block_number=len(self.blockchain.chain),
+                block_hash="pending",
+                gas_used=0,
+                status="pending",
+                timestamp=int(time.time())
+            )
+            
+            logger.info(f"Created election: {election_id}")
+            return receipt
+            
         except Exception as e:
-            logger.error(f"Election creation failed: {e}")
+            logger.error(f"Failed to create election: {e}")
             return None
     
     async def post_ballot(
@@ -276,154 +301,115 @@ class BlockchainService:
         encrypted_vote: str,
         blind_signature: str
     ) -> Optional[BlockchainTransaction]:
-        """Post an encrypted ballot to the blockchain"""
+        """Post a ballot to the blockchain"""
         try:
-            if not self.connected:
-                await self.initialize()
+            if not self.blockchain:
+                return None
             
-            if self.election_contract and self.w3 and self.account:
-                # Verify signature before posting
-                if not await self._verify_blind_signature(encrypted_vote, blind_signature):
-                    raise ValueError("Invalid blind signature")
-                
-                # Build transaction
-                function = self.election_contract.functions.postBallot(
-                    election_id,
-                    encrypted_vote,
-                    blind_signature
-                )
-                
-                transaction = function.build_transaction({
-                    'from': self.account.address,
-                    'nonce': self.w3.eth.get_transaction_count(self.account.address),
-                    'gas': 300000,
-                    'gasPrice': self.w3.to_wei('20', 'gwei'),
-                })
-                
-                # Sign and send
-                signed_txn = self.account.sign_transaction(transaction)
-                tx_hash = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-                
-                # Wait for confirmation
-                tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-                
-                return BlockchainTransaction(
-                    transaction_hash=tx_hash.hex(),
-                    block_number=tx_receipt.blockNumber,
-                    block_hash=tx_receipt.blockHash.hex(),
-                    gas_used=tx_receipt.gasUsed,
-                    status="success" if tx_receipt.status == 1 else "failed",
-                    timestamp=int(time.time())
-                )
-            else:
-                # Mock transaction for development
-                return await self._create_mock_transaction("post_ballot")
-                
+            transaction = {
+                "type": "post_ballot",
+                "election_id": election_id,
+                "encrypted_vote": encrypted_vote,
+                "blind_signature": blind_signature,
+                "timestamp": int(time.time())
+            }
+            
+            transaction_hash = self.blockchain.add_transaction(transaction)
+            
+            # Create transaction receipt
+            receipt = BlockchainTransaction(
+                transaction_hash=transaction_hash,
+                block_number=len(self.blockchain.chain),
+                block_hash="pending",
+                gas_used=0,
+                status="pending",
+                timestamp=int(time.time())
+            )
+            
+            logger.info(f"Posted ballot for election: {election_id}")
+            return receipt
+            
         except Exception as e:
-            logger.error(f"Ballot posting failed: {e}")
+            logger.error(f"Failed to post ballot: {e}")
             return None
     
     async def get_ballots(self, election_id: str) -> List[Dict[str, Any]]:
         """Get all ballots for an election"""
         try:
-            if self.election_contract and self.w3:
-                ballots = self.election_contract.functions.getBallots(election_id).call()
-                return [{"encrypted_vote": ballot} for ballot in ballots]
-            else:
-                # Return mock ballots for development
-                return await self._get_mock_ballots(election_id)
-                
+            if not self.blockchain:
+                return []
+            
+            transactions = self.blockchain.get_transactions_by_election(election_id)
+            ballots = [tx for tx in transactions if tx.get("type") == "post_ballot"]
+            
+            return ballots
+            
         except Exception as e:
-            logger.error(f"Error retrieving ballots: {e}")
+            logger.error(f"Failed to get ballots: {e}")
             return []
     
     async def get_election_info(self, election_id: str) -> Optional[Dict[str, Any]]:
-        """Get election information from blockchain"""
+        """Get election information"""
         try:
-            if self.election_contract and self.w3:
-                info = self.election_contract.functions.getElectionInfo(election_id).call()
-                return {
-                    "name": info[0],
-                    "public_key": info[1],
-                    "ballot_count": info[2]
-                }
-            else:
-                # Return mock info for development
-                return await self._get_mock_election_info(election_id)
-                
+            if not self.blockchain:
+                return None
+            
+            transactions = self.blockchain.get_transactions_by_election(election_id)
+            election_creation = [tx for tx in transactions if tx.get("type") == "create_election"]
+            
+            if not election_creation:
+                return None
+            
+            election_data = election_creation[0]
+            ballots = await self.get_ballots(election_id)
+            
+            return {
+                "election_id": election_id,
+                "name": election_data.get("name", ""),
+                "public_key": election_data.get("public_key", ""),
+                "created_at": election_data.get("timestamp", 0),
+                "total_ballots": len(ballots),
+                "ballots": ballots
+            }
+            
         except Exception as e:
-            logger.error(f"Error retrieving election info: {e}")
+            logger.error(f"Failed to get election info: {e}")
             return None
     
-    async def _verify_blind_signature(self, encrypted_vote: str, blind_signature: str) -> bool:
-        """Verify blind signature on encrypted vote"""
-        # This would integrate with the blind signature verification
-        # For now, return True for development
-        return True
-    
-    async def _create_mock_transaction(self, operation: str) -> BlockchainTransaction:
-        """Create mock transaction for development"""
-        return BlockchainTransaction(
-            transaction_hash=f"0x{hashlib.sha256(f'{operation}{time.time()}'.encode()).hexdigest()}",
-            block_number=int(time.time()) % 1000000,
-            block_hash=f"0x{hashlib.sha256(f'block{time.time()}'.encode()).hexdigest()}",
-            gas_used=150000,
-            status="success",
-            timestamp=int(time.time())
-        )
-    
-    async def _get_mock_ballots(self, election_id: str) -> List[Dict[str, Any]]:
-        """Get mock ballots for development"""
-        return [
-            {"encrypted_vote": f"mock_encrypted_vote_{i}_{election_id}"}
-            for i in range(3)
-        ]
-    
-    async def _get_mock_election_info(self, election_id: str) -> Dict[str, Any]:
-        """Get mock election info for development"""
-        return {
-            "name": f"Mock Election {election_id}",
-            "public_key": "mock_public_key",
-            "ballot_count": 3
-        }
-    
     async def close(self):
-        """Close blockchain connections"""
-        try:
-            self.connected = False
-            logger.info("Blockchain service closed")
-        except Exception as e:
-            logger.error(f"Error closing blockchain service: {e}")
+        """Close blockchain service"""
+        if self.blockchain:
+            self.blockchain.stop_mining()
+        self.connected = False
+        logger.info("Blockchain service closed")
     
     async def get_network_status(self) -> Dict[str, Any]:
         """Get blockchain network status"""
         try:
-            if self.w3 and self.w3.is_connected():
-                latest_block = self.w3.eth.get_block('latest')
-                return {
-                    "connected": True,
-                    "network_id": self.network_id,
-                    "latest_block": latest_block.number,
-                    "block_time": latest_block.timestamp,
-                    "account_address": self.account.address if self.account else None
-                }
-            else:
-                return {
-                    "connected": False,
-                    "network_id": self.network_id,
-                    "mode": "mock" if settings.MOCK_BLOCKCHAIN else "disconnected"
-                }
+            if not self.blockchain:
+                return {"status": "disconnected"}
+            
+            return {
+                "status": "connected" if self.connected else "disconnected",
+                "network_id": self.network_id,
+                "chain_length": len(self.blockchain.chain),
+                "pending_transactions": len(self.blockchain.pending_transactions),
+                "difficulty": self.blockchain.difficulty,
+                "is_mining": self.blockchain.is_mining,
+                "is_valid": self.blockchain.is_chain_valid()
+            }
+            
         except Exception as e:
-            logger.error(f"Error getting network status: {e}")
-            return {"connected": False, "error": str(e)}
+            logger.error(f"Failed to get network status: {e}")
+            return {"status": "error", "error": str(e)}
     
     async def estimate_gas(self, transaction_data: Dict[str, Any]) -> int:
         """Estimate gas for a transaction"""
         try:
-            if self.w3:
-                return self.w3.eth.estimate_gas(transaction_data)
+            if self.blockchain:
+                return 150000  # Mock gas estimate for local blockchain
             else:
-                return 150000  # Mock gas estimate
+                return 300000  # Safe default
         except Exception as e:
             logger.error(f"Gas estimation failed: {e}")
             return 300000  # Safe default
@@ -440,7 +426,7 @@ async def verify_blockchain_integrity(blockchain_service: BlockchainService, ele
             return False
         
         # Verify ballot count matches
-        if len(ballots) != election_info.get("ballot_count", 0):
+        if len(ballots) != election_info.get("total_ballots", 0):
             return False
         
         # Additional integrity checks would go here

@@ -2,7 +2,7 @@
 // Common functionality and API interactions
 
 // Configuration
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8001';
 
 // Common utility functions
 class MediVoteAPI {

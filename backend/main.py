@@ -24,7 +24,7 @@ class Settings:
     APP_VERSION = "1.0.0"
     DEBUG = True
     HOST = "0.0.0.0"
-    PORT = 8000
+    PORT = 8001
     
     CORS_ORIGINS = [
         "http://localhost:3000",
@@ -38,14 +38,14 @@ settings = Settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    print("🚀 Starting MediVote Backend (Fixed Version)")
+    print("Starting MediVote Backend (Fixed Version)")
     
     # Initialize basic services
-    print("✅ Basic services initialized")
+    print("Basic services initialized")
     
     yield
     
-    print("🛑 Shutting down MediVote Backend")
+    print("Shutting down MediVote Backend")
 
 # Create FastAPI app
 app = FastAPI(
@@ -276,9 +276,9 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 if __name__ == "__main__":
-    print("🚀 Starting MediVote Backend (Fixed Version)")
+    print("Starting MediVote Backend (Fixed Version)")
     uvicorn.run(
-        app,
+        "main:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.DEBUG

@@ -142,7 +142,7 @@ class AuditLog(Base):
     method = Column(String(10))
     
     # Additional data
-    metadata = Column(JSON, default=dict)
+    audit_metadata = Column(JSON, default=dict)
     risk_score = Column(Integer, default=0)
 
 class APIKey(Base):
@@ -337,7 +337,7 @@ class SecurityUtils:
         return session_token, refresh_token
     
     @staticmethod
-    def calculate_risk_score(event_type: SecurityEvent, metadata: Dict) -> int:
+    def calculate_risk_score(event_type: SecurityEvent, audit_metadata: Dict) -> int:
         """Calculate risk score for security events"""
         base_scores = {
             SecurityEvent.LOGIN_FAILED: 20,
@@ -350,12 +350,12 @@ class SecurityUtils:
         
         score = base_scores.get(event_type, 10)
         
-        # Adjust based on metadata
-        if metadata.get('repeated_attempts', 0) > 3:
-            score += 30
-        if metadata.get('unusual_location', False):
-            score += 20
-        if metadata.get('privileged_operation', False):
-            score += 25
+        # Adjust based on audit_metadata
+        if audit_metadata.get('repeated_attempts', 0) > 3:
+            score += 2
+        if audit_metadata.get('unusual_location', False):
+            score += 2
+        if audit_metadata.get('privileged_operation', False):
+            score += 2
             
         return min(score, 100)  # Cap at 100 

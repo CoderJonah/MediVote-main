@@ -186,6 +186,7 @@ async def admin_login(
 @router.post("/auth/logout")
 @limiter.limit("10/minute")
 async def admin_logout(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db=Depends(get_db)
 ):
@@ -252,6 +253,7 @@ async def create_admin_user(
 @router.post("/users/change-password")
 @limiter.limit("3/minute")
 async def change_admin_password(
+    request: Request,
     password_request: PasswordChangeRequest,
     admin: SecurityContext = Depends(get_current_admin),
     db=Depends(get_db)
@@ -337,16 +339,21 @@ async def create_election(
         
         logger.info(f"Election created: {election_id} by {admin.username}")
         
-        return ElectionManagementResponse(
-            status="success",
-            message=f"Election '{election_request.name}' created successfully",
-            election_id=election_id,
-            blockchain_transaction=blockchain_tx.transaction_hash if blockchain_tx else None,
-            homomorphic_setup={
+        return {
+            "status": "success",
+            "message": f"Election '{election_request.name}' created successfully",
+            "election_id": election_id,
+            "name": election_request.name,
+            "description": election_request.description,
+            "start_date": election_request.start_date.isoformat() if hasattr(election_request.start_date, 'isoformat') else str(election_request.start_date),
+            "end_date": election_request.end_date.isoformat() if hasattr(election_request.end_date, 'isoformat') else str(election_request.end_date),
+            "candidates": election_request.candidates,
+            "blockchain_transaction": blockchain_tx.transaction_hash if blockchain_tx else None,
+            "homomorphic_setup": {
                 "public_key_size": election_setup["public_key"]["n"],
                 "security_parameter": election_setup.get("security_parameter", 2048)
             }
-        )
+        }
         
     except HTTPException:
         raise
@@ -356,6 +363,17 @@ async def create_election(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create election"
         )
+
+@router.post("/create-ballot")
+@limiter.limit("2/minute")
+async def create_ballot_alias(
+    request: Request,
+    ballot_request: CreateElectionRequest,
+    admin: SecurityContext = Depends(get_current_admin),
+    db=Depends(get_db)
+):
+    # Call the same logic as create_election
+    return await create_election(request, ballot_request, admin, db)
 
 @router.post("/elections/{election_id}/activate")
 @limiter.limit("5/minute")
