@@ -1,0 +1,56 @@
+# Web Framework and API
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+pydantic-settings==2.1.0
+sqlalchemy==2.0.23
+alembic==1.13.1
+redis==5.0.1
+
+# Cryptographic Libraries
+phe==1.5.0  # Paillier homomorphic encryption
+cryptography==41.0.7
+coincurve==18.0.0  # Elliptic curve cryptography
+py-ecc==6.0.0  # Ethereum cryptography
+
+# Scientific Computing
+numpy==1.24.3
+scipy==1.11.4
+
+# JSON Schema validation
+jsonschema==4.20.0
+
+# Blockchain Integration
+web3==6.11.3
+eth-account==0.9.0
+
+# Security and Validation
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+PyJWT==2.8.0
+slowapi==0.1.9  # Rate limiting
+user-agents==2.2.0  # User agent parsing
+
+# Testing and Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.2
+faker==20.1.0
+
+# Utilities
+python-dotenv==1.0.0
+click==8.1.7
+loguru==0.7.2
+aiofiles==23.2.1
+qrcode[pil]==7.4.2
+
+# Database drivers
+psycopg2-binary==2.9.9
+aiosqlite==0.19.0
+
+# Additional dependencies for core functionality
+requests==2.31.0
+async-timeout==4.0.3
+pytz==2023.3 

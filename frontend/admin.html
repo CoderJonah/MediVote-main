@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - MediVote</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-vote-yea"></i>
+                <span>MediVote</span>
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="register.html" class="nav-link">Register</a>
+                <a href="vote.html" class="nav-link">Vote</a>
+                <a href="verify.html" class="nav-link">Verify</a>
+                <a href="results.html" class="nav-link">Results</a>
+                <a href="admin.html" class="nav-link active">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <h1 class="text-center mb-4">
+                <i class="fas fa-cogs"></i>
+                Admin Panel
+            </h1>
+
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>
+                    <strong>Administrative Access:</strong> This panel is for authorized election administrators only. 
+                    All actions are logged and auditable.
+                </div>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="showTab('create-ballot')">
+                    <i class="fas fa-plus"></i>
+                    Create Ballot
+                </button>
+                <button class="tab-btn" onclick="showTab('manage-ballots')">
+                    <i class="fas fa-list"></i>
+                    Manage Ballots
+                </button>
+                <button class="tab-btn" onclick="showTab('system-monitor')">
+                    <i class="fas fa-chart-line"></i>
+                    System Monitor
+                </button>
+            </div>
+
+            <div id="create-ballot" class="tab-content active">
+                <div class="form-container">
+                    <h2>Create New Ballot</h2>
+                    <form id="ballotForm">
+                        <div class="form-group">
+                            <label for="ballotTitle">Ballot Title *</label>
+                            <input type="text" id="ballotTitle" name="ballotTitle" required 
+                                   placeholder="Enter ballot title (e.g., 2024 Presidential Election)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ballotDescription">Description *</label>
+                            <textarea id="ballotDescription" name="ballotDescription" required 
+                                      placeholder="Enter detailed description of the election"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="startTime">Start Time *</label>
+                            <input type="datetime-local" id="startTime" name="startTime" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="endTime">End Time *</label>
+                            <input type="datetime-local" id="endTime" name="endTime" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Candidates</label>
+                            <div id="candidatesContainer">
+                                <div class="candidate-input">
+                                    <input type="text" name="candidateName" placeholder="Candidate Name" required>
+                                    <input type="text" name="candidateParty" placeholder="Party/Position">
+                                    <button type="button" class="btn btn-error btn-sm" onclick="removeCandidate(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="candidate-input">
+                                    <input type="text" name="candidateName" placeholder="Candidate Name" required>
+                                    <input type="text" name="candidateParty" placeholder="Party/Position">
+                                    <button type="button" class="btn btn-error btn-sm" onclick="removeCandidate(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline" onclick="addCandidate()">
+                                <i class="fas fa-plus"></i>
+                                Add Candidate
+                            </button>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="fas fa-times"></i>
+                                Reset Form
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus"></i>
+                                Create Ballot
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="manage-ballots" class="tab-content">
+                <h2>Manage Ballots</h2>
+                <div id="ballotsManagement">
+                    <div class="loading-container text-center">
+                        <div class="loading"></div>
+                        <p>Loading ballots...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="system-monitor" class="tab-content">
+                <h2>System Monitor</h2>
+                <div class="monitor-grid">
+                    <div class="monitor-card">
+                        <h3>
+                            <i class="fas fa-users"></i>
+                            Registered Voters
+                        </h3>
+                        <div class="monitor-value" id="registeredVoters">Loading...</div>
+                    </div>
+                    <div class="monitor-card">
+                        <h3>
+                            <i class="fas fa-vote-yea"></i>
+                            Total Votes Cast
+                        </h3>
+                        <div class="monitor-value" id="totalVotes">Loading...</div>
+                    </div>
+                    <div class="monitor-card">
+                        <h3>
+                            <i class="fas fa-ballot-check"></i>
+                            Active Ballots
+                        </h3>
+                        <div class="monitor-value" id="activeBallots">Loading...</div>
+                    </div>
+                    <div class="monitor-card">
+                        <h3>
+                            <i class="fas fa-shield-alt"></i>
+                            Security Status
+                        </h3>
+                        <div class="monitor-value" id="securityStatus">Loading...</div>
+                    </div>
+                </div>
+
+                <div class="system-status-detail">
+                    <h3>System Components Status</h3>
+                    <div id="systemComponentsStatus">
+                        <div class="loading-container text-center">
+                            <div class="loading"></div>
+                            <p>Checking system status...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>MediVote Admin</h4>
+                    <p>Secure administrative interface for election management.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Security</h4>
+                    <ul>
+                        <li>Audit Logging</li>
+                        <li>Access Control</li>
+                        <li>Cryptographic Verification</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li>Admin Documentation</li>
+                        <li>Technical Support</li>
+                        <li>Emergency Contacts</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MediVote. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js?v=1.1"></script>
+    <script src="js/admin.js?v=1.1"></script>
+</body>
+</html>
+
+<style>
+.admin-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn:hover,
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.candidate-input {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.candidate-input input {
+    flex: 1;
+}
+
+.monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.monitor-card {
+    background: var(--surface-color);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-light);
+    text-align: center;
+}
+
+.monitor-card h3 {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.monitor-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.system-status-detail {
+    background: var(--surface-color);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-light);
+}
+
+.loading-container {
+    padding: 2rem;
+}
+
+.ballot-management-item {
+    background: var(--surface-color);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-light);
+    margin-bottom: 1rem;
+}
+
+.ballot-management-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.ballot-management-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ballot-status {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.ballot-status.active {
+    background: var(--success-color);
+    color: white;
+}
+
+.ballot-status.upcoming {
+    background: var(--warning-color);
+    color: white;
+}
+
+.ballot-status.completed {
+    background: var(--text-secondary);
+    color: white;
+}
+</style> 

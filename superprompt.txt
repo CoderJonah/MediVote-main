@@ -1,0 +1,27 @@
+Nick
+I am using the app cursor to create the future of voting with the main focus being a phone orienited voting as to make for a more fair and accessable system for voting
+
+
+
+Jonah
+Hello Gemini, hope you're having a good night. My friend BeachCoder and I are using the Cursor applications
+to create an application fundamentally change our voting system...envision an application that uses blockchain to 
+verify votes and count them keeping a clear trail for voters to stop voter suppression. Eventually this application will 
+be launched on our website themedian.org and have a phone application for at home voting.
+
+The voting system should use the best encryption to keep voter data anonymous. There will be a blacklist for people
+that are not allowed to vote such as felons. The system will start as an opt-in process that allows a voter
+to have their vote counted on an electoral blockchain. Key aspects of this system include user verification through
+Social Security Number confirmation. To disallow brute forcing of SSN's the user will need to verify their name and 
+current address with government databases. We will start with a test database with users such as "John Smith" at 
+"1 Drury Ln, New York, NY 07008" with SSN 000-00-0001. The system will only allow each MAC address to cast votes once and will blacklist
+a device with a reasonable number of ill attempts (I think 3 attempts is reasonable and warn the user after each ill 
+attempt).
+
+Modern features such as fingerprint reading and facial recognition will be added in the future. I think we should 
+build a blockchain that instead of blocks uses votes with free gas to run the system. Anyone should be able to host a node
+but cannot edit the chain itself. A government agency such as ID.me will be used to track valid votes and verify for counting.
+
+Create a SUPERPROMPT for the purposes of having the Cursor AI flesh out this idea and fill in any gaps in logic
+and make it as safe secure and robust as possible, squeezing as much out of your context window as possible for
+the purposes of handing the task off to Claude 4 Sonnet.

@@ -1,0 +1,133 @@
+{
+  "application": {
+    "name": "MediVote",
+    "display_name": "MediVote - Secure Blockchain Voting",
+    "version": "1.0.0",
+    "description": "Secure Blockchain-Based Voting System with End-to-End Verifiability",
+    "author": "The Median",
+    "company": "The Median",
+    "website": "https://themedian.org",
+    "support_url": "https://github.com/the-median/medivote/issues",
+    "license": "MIT",
+    "copyright": "© 2024 The Median. All rights reserved."
+  },
+  "build": {
+    "main_script": "medivote_main.py",
+    "icon_file": "assets/medivote_icon.ico",
+    "build_dir": "build",
+    "dist_dir": "dist",
+    "installer_dir": "installer",
+    "include_files": [
+      "backend/",
+      "frontend/",
+      "assets/",
+      ".env",
+      "requirements.txt",
+      "README.md",
+      "LICENSE"
+    ],
+    "hidden_imports": [
+      "uvicorn",
+      "fastapi",
+      "pydantic",
+      "sqlite3",
+      "tkinter",
+      "tkinter.ttk",
+      "tkinter.messagebox",
+      "PIL",
+      "PIL.Image",
+      "PIL.ImageDraw",
+      "PIL.ImageFont",
+      "cryptography",
+      "python-multipart",
+      "requests",
+      "python-dotenv"
+    ],
+    "exclude_modules": [
+      "test",
+      "tests",
+      "pytest",
+      "unittest"
+    ]
+  },
+  "windows": {
+    "installer_name": "MediVote-Setup.exe",
+    "install_dir": "$PROGRAMFILES\\MediVote",
+    "start_menu_folder": "MediVote",
+    "desktop_shortcut": true,
+    "start_menu_shortcut": true,
+    "uninstaller": true,
+    "admin_required": true,
+    "registry_entries": {
+      "company": "The Median",
+      "product": "MediVote",
+      "version": "1.0.0"
+    },
+    "file_associations": [],
+    "services": [],
+    "firewall_rules": [
+      {
+        "name": "MediVote Backend",
+        "port": 8000,
+        "protocol": "TCP",
+        "direction": "inbound"
+      }
+    ]
+  },
+  "macos": {
+    "bundle_name": "MediVote.app",
+    "bundle_identifier": "org.themedian.medivote",
+    "install_dir": "/Applications",
+    "minimum_os_version": "10.15",
+    "code_sign": false,
+    "notarize": false,
+    "create_dmg": true,
+    "dmg_name": "MediVote-Installer.dmg"
+  },
+  "linux": {
+    "package_name": "medivote",
+    "install_dir": "/opt/medivote",
+    "bin_dir": "/usr/local/bin",
+    "desktop_file": true,
+    "icon_dir": "/usr/share/pixmaps",
+    "applications_dir": "/usr/share/applications",
+    "create_deb": true,
+    "create_rpm": true,
+    "dependencies": [
+      "python3",
+      "python3-tk",
+      "python3-pip"
+    ]
+  },
+  "features": {
+    "auto_start": false,
+    "system_tray": true,
+    "check_updates": true,
+    "crash_reporting": false,
+    "analytics": false,
+    "logging": true,
+    "config_gui": true
+  },
+  "permissions": {
+    "network": true,
+    "file_system": true,
+    "registry": true,
+    "admin": true,
+    "firewall": true
+  },
+  "security": {
+    "code_signing": false,
+    "certificate_file": "",
+    "certificate_password": "",
+    "timestamp_server": "http://timestamp.digicert.com",
+    "virus_scan": true
+  },
+  "deployment": {
+    "create_portable": true,
+    "create_msi": true,
+    "create_zip": true,
+    "auto_updater": false,
+    "update_server": "",
+    "crash_dump": true
+  }
+} 

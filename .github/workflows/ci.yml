@@ -1,0 +1,427 @@
+name: MediVote CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ published ]
+
+env:
+  PYTHON_VERSION: '3.9'
+  NODE_VERSION: '16'
+
+jobs:
+  # Security and Code Quality Checks
+  security:
+    name: Security & Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install bandit safety
+
+      - name: Run security scan
+        run: |
+          bandit -r backend/ -f json -o bandit-report.json || true
+          safety check --json --output safety-report.json || true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+
+  # Cross-Platform Testing
+  test-cross-platform:
+    name: Cross-Platform Tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11']
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Install Node.js dependencies
+        run: |
+          npm install -g concurrently
+          npm install
+
+      - name: Run cross-platform tests
+        run: |
+          python test_cross_platform.py
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
+          path: test_report.json
+
+  # Backend Testing
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: medivote_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio httpx
+
+      - name: Run backend tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/medivote_test
+          REDIS_URL: redis://localhost:6379
+          TESTING: True
+        run: |
+          python -m pytest backend/tests/ -v --cov=backend --cov-report=xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # Frontend Testing
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: |
+          npm test -- --coverage --watchAll=false
+
+      - name: Upload frontend coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+
+  # Docker Testing
+  test-docker:
+    name: Docker Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker images
+        run: |
+          docker-compose build
+
+      - name: Test Docker Compose
+        run: |
+          docker-compose up -d
+          sleep 30
+          docker-compose ps
+          docker-compose down
+
+      - name: Test individual services
+        run: |
+          docker build -t medivote-backend ./backend
+          docker build -t medivote-frontend ./frontend
+
+  # Security Testing
+  security-testing:
+    name: Security Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install bandit safety
+
+      - name: Run security tests
+        run: |
+          python production_security_test.py
+
+      - name: Run cryptographic tests
+        run: |
+          python test_cross_platform.py
+
+  # Accessibility Testing
+  accessibility:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          npm install -g axe-core
+          npm install
+
+      - name: Run accessibility tests
+        run: |
+          # Test HTML files for accessibility
+          for file in frontend/*.html; do
+            echo "Testing accessibility for $file"
+            # Add accessibility testing logic here
+          done
+
+  # Performance Testing
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install locust
+
+      - name: Run performance tests
+        run: |
+          # Start the application
+          python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+          
+          # Run load tests
+          locust -f performance_tests/locustfile.py --headless --users 10 --spawn-rate 1 --run-time 60s
+
+  # Integration Testing
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: medivote_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/medivote_test
+          REDIS_URL: redis://localhost:6379
+          TESTING: True
+        run: |
+          python -m pytest tests/integration/ -v
+
+  # Documentation Generation
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install sphinx sphinx-rtd-theme
+
+      - name: Generate documentation
+        run: |
+          # Generate API documentation
+          python -c "
+          import uvicorn
+          from backend.main import app
+          import json
+          
+          # Generate OpenAPI spec
+          openapi_spec = app.openapi()
+          with open('docs/api-spec.json', 'w') as f:
+              json.dump(openapi_spec, f, indent=2)
+          "
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation
+          path: docs/
+
+  # Release Preparation
+  release-prep:
+    name: Release Preparation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run comprehensive tests
+        run: |
+          python ultra_comprehensive_test_suite.py
+
+      - name: Generate release notes
+        run: |
+          echo "## Release Notes for ${{ github.event.release.tag_name }}" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "### Changes" >> RELEASE_NOTES.md
+          echo "- Security improvements" >> RELEASE_NOTES.md
+          echo "- Bug fixes" >> RELEASE_NOTES.md
+          echo "- Performance enhancements" >> RELEASE_NOTES.md
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-artifacts
+          path: |
+            RELEASE_NOTES.md
+            test_report.json
+            docs/
+
+  # Final Status Check
+  status-check:
+    name: Status Check
+    runs-on: ubuntu-latest
+    needs: [security, test-cross-platform, test-backend, test-frontend, test-docker, security-testing, accessibility, performance, integration, docs]
+    if: always()
+    steps:
+      - name: Check overall status
+        run: |
+          echo "All CI/CD jobs completed"
+          echo "Check individual job results above"
+          
+          # This job will only run if all previous jobs succeeded
+          # or if we want to show overall status regardless of individual results 

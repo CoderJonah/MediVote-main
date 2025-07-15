@@ -1,0 +1,44 @@
+{
+  "name": "medivote",
+  "version": "1.0.0",
+  "description": "Secure blockchain-based voting system with end-to-end verifiability",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
+    "dev:frontend": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && python -m pytest tests/",
+    "test:frontend": "cd frontend && npm test",
+    "setup": "./setup.sh",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/the-median/medivote.git"
+  },
+  "keywords": [
+    "voting",
+    "blockchain",
+    "election",
+    "zero-knowledge",
+    "homomorphic-encryption",
+    "verifiable-credentials",
+    "accessibility"
+  ],
+  "author": "The Median <contact@themedian.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/the-median/medivote/issues"
+  },
+  "homepage": "https://themedian.org",
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "python": ">=3.9.0"
+  }
+} 

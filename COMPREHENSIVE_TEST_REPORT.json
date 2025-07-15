@@ -1,0 +1,1070 @@
+{
+  "timestamp": "2025-07-13T22:38:49.600972",
+  "summary": {
+    "total_tests": 132,
+    "passed": 102,
+    "failed": 0,
+    "warnings": 29,
+    "info": 1,
+    "success_rate": 77.27272727272727
+  },
+  "results": [
+    {
+      "timestamp": "2025-07-13T22:38:47.446054",
+      "category": "STRUCTURE",
+      "test": "File exists: simple_main.py",
+      "status": "PASS",
+      "details": "Size: 17729 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.449994",
+      "category": "STRUCTURE",
+      "test": "File exists: simple_main_with_security.py",
+      "status": "PASS",
+      "details": "Size: 26306 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.453770",
+      "category": "STRUCTURE",
+      "test": "File exists: requirements.txt",
+      "status": "PASS",
+      "details": "Size: 1210 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.457525",
+      "category": "STRUCTURE",
+      "test": "File exists: README.md",
+      "status": "PASS",
+      "details": "Size: 7990 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.461285",
+      "category": "STRUCTURE",
+      "test": "File exists: CONTRIBUTING.md",
+      "status": "PASS",
+      "details": "Size: 9815 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.470513",
+      "category": "STRUCTURE",
+      "test": "File exists: LICENSE",
+      "status": "PASS",
+      "details": "Size: 1087 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.475318",
+      "category": "STRUCTURE",
+      "test": "File exists: setup.py",
+      "status": "PASS",
+      "details": "Size: 16184 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.484466",
+      "category": "STRUCTURE",
+      "test": "File exists: build_installer.py",
+      "status": "PASS",
+      "details": "Size: 35829 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.491180",
+      "category": "STRUCTURE",
+      "test": "File exists: installer_config.json",
+      "status": "PASS",
+      "details": "Size: 3310 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.503475",
+      "category": "STRUCTURE",
+      "test": "File exists: requirements_build.txt",
+      "status": "PASS",
+      "details": "Size: 1059 bytes",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.596948",
+      "category": "STRUCTURE",
+      "test": "Directory exists: backend",
+      "status": "PASS",
+      "details": "Contains 3 files",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.728795",
+      "category": "STRUCTURE",
+      "test": "Directory exists: frontend",
+      "status": "PASS",
+      "details": "Contains 10 files",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.730725",
+      "category": "STRUCTURE",
+      "test": "Missing directory: tests",
+      "status": "WARN",
+      "details": "May be optional",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.732182",
+      "category": "STRUCTURE",
+      "test": "Missing directory: docs",
+      "status": "WARN",
+      "details": "May be optional",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.776094",
+      "category": "SYNTAX",
+      "test": "Python syntax: build_installer.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.807081",
+      "category": "SYNTAX",
+      "test": "Python syntax: comprehensive_fixed_test_suite.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.847940",
+      "category": "SYNTAX",
+      "test": "Python syntax: comprehensive_test_validator.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.865398",
+      "category": "SYNTAX",
+      "test": "Python syntax: create_demo_ballot.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.892142",
+      "category": "SYNTAX",
+      "test": "Python syntax: create_msi_installer.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.914186",
+      "category": "SYNTAX",
+      "test": "Python syntax: demo_medivote.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.950499",
+      "category": "SYNTAX",
+      "test": "Python syntax: deploy.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:47.976410",
+      "category": "SYNTAX",
+      "test": "Python syntax: initialize_production_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.015789",
+      "category": "SYNTAX",
+      "test": "Python syntax: portable_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.058190",
+      "category": "SYNTAX",
+      "test": "Python syntax: production_security_test.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.084998",
+      "category": "SYNTAX",
+      "test": "Python syntax: setup.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.121546",
+      "category": "SYNTAX",
+      "test": "Python syntax: simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.155908",
+      "category": "SYNTAX",
+      "test": "Python syntax: simple_main.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.200352",
+      "category": "SYNTAX",
+      "test": "Python syntax: simple_main_with_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.229170",
+      "category": "SYNTAX",
+      "test": "Python syntax: start_demo.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.254500",
+      "category": "SYNTAX",
+      "test": "Python syntax: test_backend.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.285373",
+      "category": "SYNTAX",
+      "test": "Python syntax: test_cross_platform.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.313907",
+      "category": "SYNTAX",
+      "test": "Python syntax: test_installation_validation.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.338619",
+      "category": "SYNTAX",
+      "test": "Python syntax: test_medivote_demo.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.358301",
+      "category": "SYNTAX",
+      "test": "Python syntax: test_simple.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.394172",
+      "category": "SYNTAX",
+      "test": "Python syntax: ultimate_test_suite.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.447042",
+      "category": "SYNTAX",
+      "test": "Python syntax: ultra_comprehensive_test_suite.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.474536",
+      "category": "SYNTAX",
+      "test": "Python syntax: verify_deployment.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.500263",
+      "category": "DEPS",
+      "test": "Requirements file readable",
+      "status": "PASS",
+      "details": "Found 57 dependencies",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.500710",
+      "category": "DEPS",
+      "test": "Critical dependency: fastapi",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.500857",
+      "category": "DEPS",
+      "test": "Critical dependency: uvicorn",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.500906",
+      "category": "DEPS",
+      "test": "Critical dependency: pydantic",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.501102",
+      "category": "DEPS",
+      "test": "Critical dependency: sqlalchemy",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.530713",
+      "category": "CONFIG",
+      "test": "Valid JSON: installer_config.json",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.555043",
+      "category": "CONFIG",
+      "test": "Valid JSON: package.json",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.574568",
+      "category": "CONFIG",
+      "test": "File readable: docker-compose.yml",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.578120",
+      "category": "CONFIG",
+      "test": "Optional config missing: Dockerfile",
+      "status": "INFO",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.599505",
+      "category": "SECURITY",
+      "test": "Missing Password hashing in simple_main_with_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.601106",
+      "category": "SECURITY",
+      "test": "JWT authentication in simple_main_with_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.602500",
+      "category": "SECURITY",
+      "test": "Missing CSRF protection in simple_main_with_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.604237",
+      "category": "SECURITY",
+      "test": "Rate limiting in simple_main_with_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.606367",
+      "category": "SECURITY",
+      "test": "Data encryption in simple_main_with_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.607656",
+      "category": "SECURITY",
+      "test": "Input validation in simple_main_with_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.632107",
+      "category": "SECURITY",
+      "test": "Missing Password hashing in initialize_production_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.633704",
+      "category": "SECURITY",
+      "test": "Missing JWT authentication in initialize_production_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.634800",
+      "category": "SECURITY",
+      "test": "Missing CSRF protection in initialize_production_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.636069",
+      "category": "SECURITY",
+      "test": "Missing Rate limiting in initialize_production_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.637185",
+      "category": "SECURITY",
+      "test": "Missing Data encryption in initialize_production_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.638576",
+      "category": "SECURITY",
+      "test": "Missing Input validation in initialize_production_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.671475",
+      "category": "INSTALLER",
+      "test": "Download functionality in build_installer.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.673414",
+      "category": "INSTALLER",
+      "test": "Installation logic in build_installer.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.674657",
+      "category": "INSTALLER",
+      "test": "Verification steps in build_installer.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.676271",
+      "category": "INSTALLER",
+      "test": "Path management in build_installer.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.677825",
+      "category": "INSTALLER",
+      "test": "Environment setup in build_installer.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.699651",
+      "category": "INSTALLER",
+      "test": "Installation logic in simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.702083",
+      "category": "INSTALLER",
+      "test": "Path management in simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.706863",
+      "category": "INSTALLER",
+      "test": "Environment setup in simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.731739",
+      "category": "INSTALLER",
+      "test": "Installation logic in setup.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.733546",
+      "category": "INSTALLER",
+      "test": "Path management in setup.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.734548",
+      "category": "INSTALLER",
+      "test": "Environment setup in setup.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.752759",
+      "category": "DOCS",
+      "test": "Comprehensive README.md",
+      "status": "PASS",
+      "details": "995 words",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.753443",
+      "category": "DOCS",
+      "test": "README has installation section",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.753759",
+      "category": "DOCS",
+      "test": "README missing usage section",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.754101",
+      "category": "DOCS",
+      "test": "README has features section",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.754375",
+      "category": "DOCS",
+      "test": "README has requirements section",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.778281",
+      "category": "DOCS",
+      "test": "Comprehensive CONTRIBUTING.md",
+      "status": "PASS",
+      "details": "1275 words",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.799708",
+      "category": "DOCS",
+      "test": "Comprehensive LICENSE",
+      "status": "PASS",
+      "details": "169 words",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.830057",
+      "category": "PLATFORM",
+      "test": "Platform detection in build_installer.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.830205",
+      "category": "PLATFORM",
+      "test": "Potential path issues in build_installer.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.852218",
+      "category": "PLATFORM",
+      "test": "Cross-platform paths in comprehensive_fixed_test_suite.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.852541",
+      "category": "PLATFORM",
+      "test": "Potential path issues in comprehensive_fixed_test_suite.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.864072",
+      "category": "PLATFORM",
+      "test": "Cross-platform paths in comprehensive_test_validator.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.864511",
+      "category": "PLATFORM",
+      "test": "Platform detection in comprehensive_test_validator.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.865375",
+      "category": "PLATFORM",
+      "test": "Potential path issues in comprehensive_test_validator.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.886741",
+      "category": "PLATFORM",
+      "test": "Potential path issues in create_demo_ballot.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.901009",
+      "category": "PLATFORM",
+      "test": "Potential path issues in create_msi_installer.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.938669",
+      "category": "PLATFORM",
+      "test": "Platform detection in deploy.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.939205",
+      "category": "PLATFORM",
+      "test": "Potential path issues in deploy.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.954526",
+      "category": "PLATFORM",
+      "test": "Cross-platform paths in initialize_production_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.955363",
+      "category": "PLATFORM",
+      "test": "Potential path issues in initialize_production_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.975343",
+      "category": "PLATFORM",
+      "test": "Platform detection in portable_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.975532",
+      "category": "PLATFORM",
+      "test": "Potential path issues in portable_install.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.998546",
+      "category": "PLATFORM",
+      "test": "Cross-platform paths in production_security_test.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:48.999235",
+      "category": "PLATFORM",
+      "test": "Potential path issues in production_security_test.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.017829",
+      "category": "PLATFORM",
+      "test": "Platform detection in setup.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.018412",
+      "category": "PLATFORM",
+      "test": "Potential path issues in setup.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.034481",
+      "category": "PLATFORM",
+      "test": "Cross-platform paths in simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.034731",
+      "category": "PLATFORM",
+      "test": "Platform detection in simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.034898",
+      "category": "PLATFORM",
+      "test": "Potential path issues in simple_install.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.072943",
+      "category": "PLATFORM",
+      "test": "Potential path issues in simple_main_with_security.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.089523",
+      "category": "PLATFORM",
+      "test": "Potential path issues in start_demo.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.107261",
+      "category": "PLATFORM",
+      "test": "Cross-platform paths in test_backend.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.120053",
+      "category": "PLATFORM",
+      "test": "Platform detection in test_cross_platform.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.120269",
+      "category": "PLATFORM",
+      "test": "Potential path issues in test_cross_platform.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.150746",
+      "category": "PLATFORM",
+      "test": "Potential path issues in test_medivote_demo.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.170702",
+      "category": "PLATFORM",
+      "test": "Potential path issues in test_simple.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.179671",
+      "category": "PLATFORM",
+      "test": "Potential path issues in ultimate_test_suite.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.197587",
+      "category": "PLATFORM",
+      "test": "Potential path issues in ultra_comprehensive_test_suite.py",
+      "status": "WARN",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.263665",
+      "category": "PERFORMANCE",
+      "test": "Async functions in comprehensive_test_validator.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.263906",
+      "category": "PERFORMANCE",
+      "test": "Async operations in comprehensive_test_validator.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.264093",
+      "category": "PERFORMANCE",
+      "test": "Caching implementation in comprehensive_test_validator.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.264221",
+      "category": "PERFORMANCE",
+      "test": "Connection pooling in comprehensive_test_validator.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.264308",
+      "category": "PERFORMANCE",
+      "test": "Database indexing in comprehensive_test_validator.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.287965",
+      "category": "PERFORMANCE",
+      "test": "Caching implementation in create_demo_ballot.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.359358",
+      "category": "PERFORMANCE",
+      "test": "Async functions in initialize_production_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.359779",
+      "category": "PERFORMANCE",
+      "test": "Async operations in initialize_production_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.378872",
+      "category": "PERFORMANCE",
+      "test": "Async functions in portable_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.379182",
+      "category": "PERFORMANCE",
+      "test": "Database indexing in portable_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.385430",
+      "category": "PERFORMANCE",
+      "test": "Async functions in production_security_test.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.385881",
+      "category": "PERFORMANCE",
+      "test": "Async operations in production_security_test.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.409942",
+      "category": "PERFORMANCE",
+      "test": "Async functions in setup.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.410401",
+      "category": "PERFORMANCE",
+      "test": "Caching implementation in setup.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.410648",
+      "category": "PERFORMANCE",
+      "test": "Database indexing in setup.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.421265",
+      "category": "PERFORMANCE",
+      "test": "Async functions in simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.421912",
+      "category": "PERFORMANCE",
+      "test": "Async operations in simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.422642",
+      "category": "PERFORMANCE",
+      "test": "Database indexing in simple_install.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.442752",
+      "category": "PERFORMANCE",
+      "test": "Async functions in simple_main.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.443070",
+      "category": "PERFORMANCE",
+      "test": "Async operations in simple_main.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.456921",
+      "category": "PERFORMANCE",
+      "test": "Async functions in simple_main_with_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.457568",
+      "category": "PERFORMANCE",
+      "test": "Async operations in simple_main_with_security.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.475524",
+      "category": "PERFORMANCE",
+      "test": "Database indexing in start_demo.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.507343",
+      "category": "PERFORMANCE",
+      "test": "Database indexing in test_cross_platform.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T22:38:49.585533",
+      "category": "PERFORMANCE",
+      "test": "Database indexing in ultra_comprehensive_test_suite.py",
+      "status": "PASS",
+      "details": "",
+      "error": null
+    }
+  ],
+  "errors": []
+}

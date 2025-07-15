@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Vote - MediVote</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-vote-yea"></i>
+                <span>MediVote</span>
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="register.html" class="nav-link">Register</a>
+                <a href="vote.html" class="nav-link">Vote</a>
+                <a href="verify.html" class="nav-link active">Verify</a>
+                <a href="results.html" class="nav-link">Results</a>
+                <a href="admin.html" class="nav-link">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <h1 class="text-center mb-4">
+                <i class="fas fa-search"></i>
+                Verify Your Vote
+            </h1>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Vote Verification:</strong> Use your receipt ID and verification code to confirm 
+                    your vote was recorded correctly on the blockchain. This ensures end-to-end verifiability.
+                </div>
+            </div>
+
+            <div class="form-container">
+                <h2>Enter Verification Details</h2>
+                <form id="verificationForm">
+                    <div class="form-group">
+                        <label for="receiptId">Receipt ID *</label>
+                        <input type="text" id="receiptId" name="receiptId" required 
+                               placeholder="Enter your receipt ID (e.g., receipt_abc123...)">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verificationCode">Verification Code *</label>
+                        <input type="text" id="verificationCode" name="verificationCode" required 
+                               placeholder="Enter your verification code">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                            <i class="fas fa-times"></i>
+                            Clear Form
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                            Verify Vote
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div id="verificationResult" class="verification-result" style="display: none;">
+                <div class="result-header">
+                    <h2>
+                        <i class="fas fa-check-circle text-success"></i>
+                        Vote Verification Result
+                    </h2>
+                </div>
+
+                <div class="verification-details">
+                    <div class="detail-section">
+                        <h3>Vote Information</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <strong>Receipt ID:</strong>
+                                <span id="resultReceiptId"></span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Vote Hash:</strong>
+                                <span id="resultVoteHash"></span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Timestamp:</strong>
+                                <span id="resultTimestamp"></span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Ballot ID:</strong>
+                                <span id="resultBallotId"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Cryptographic Proofs</h3>
+                        <div class="proof-grid">
+                            <div class="proof-item">
+                                <div class="proof-icon">
+                                    <i class="fas fa-user-secret"></i>
+                                </div>
+                                <div class="proof-content">
+                                    <h4>Zero-Knowledge Proof</h4>
+                                    <p>Verified: Your eligibility was confirmed without revealing your identity</p>
+                                    <code id="zkProof"></code>
+                                </div>
+                            </div>
+                            <div class="proof-item">
+                                <div class="proof-icon">
+                                    <i class="fas fa-signature"></i>
+                                </div>
+                                <div class="proof-content">
+                                    <h4>Blind Signature</h4>
+                                    <p>Verified: Your ballot was authorized anonymously</p>
+                                    <code id="blindSignature"></code>
+                                </div>
+                            </div>
+                            <div class="proof-item">
+                                <div class="proof-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <div class="proof-content">
+                                    <h4>Homomorphic Tag</h4>
+                                    <p>Verified: Your vote can be counted without decryption</p>
+                                    <code id="homomorphicTag"></code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Verification Status</h3>
+                        <div class="status-checks">
+                            <div class="status-check">
+                                <i class="fas fa-check text-success"></i>
+                                <span>Vote recorded on blockchain</span>
+                            </div>
+                            <div class="status-check">
+                                <i class="fas fa-check text-success"></i>
+                                <span>Cryptographic integrity verified</span>
+                            </div>
+                            <div class="status-check">
+                                <i class="fas fa-check text-success"></i>
+                                <span>Voter anonymity preserved</span>
+                            </div>
+                            <div class="status-check">
+                                <i class="fas fa-check text-success"></i>
+                                <span>Vote counting enabled</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="verification-actions">
+                    <button class="btn btn-outline" onclick="printVerification()">
+                        <i class="fas fa-print"></i>
+                        Print Verification
+                    </button>
+                    <button class="btn btn-primary" onclick="downloadProof()">
+                        <i class="fas fa-download"></i>
+                        Download Proof
+                    </button>
+                </div>
+            </div>
+
+            <div class="verification-help">
+                <h2>How Vote Verification Works</h2>
+                <div class="help-grid">
+                    <div class="help-item">
+                        <div class="help-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="help-content">
+                            <h3>1. Get Your Receipt</h3>
+                            <p>After voting, you receive a unique receipt with ID and verification code.</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <div class="help-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="help-content">
+                            <h3>2. Enter Verification Details</h3>
+                            <p>Use the receipt ID and verification code to look up your vote.</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <div class="help-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="help-content">
+                            <h3>3. Verify Cryptographic Proofs</h3>
+                            <p>Confirm that all security protocols were correctly applied to your vote.</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <div class="help-icon">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                        <div class="help-content">
+                            <h3>4. Confirm Vote Integrity</h3>
+                            <p>Verify your vote was recorded accurately and counted properly.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>MediVote</h4>
+                    <p>Revolutionary blockchain-based voting system with advanced cryptographic security.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Verification</h4>
+                    <ul>
+                        <li>Vote Receipts</li>
+                        <li>Cryptographic Proofs</li>
+                        <li>Blockchain Verification</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Help</h4>
+                    <ul>
+                        <li>Verification Guide</li>
+                        <li>Technical Support</li>
+                        <li>Security Information</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MediVote. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js?v=1.1"></script>
+    <script src="js/verify.js?v=1.1"></script>
+</body>
+</html>
+
+<style>
+.verification-result {
+    background: var(--surface-color);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-top: 2rem;
+    box-shadow: var(--shadow-light);
+}
+
+.result-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.result-header h2 {
+    color: var(--success-color);
+    margin: 0;
+}
+
+.verification-details {
+    margin-bottom: 2rem;
+}
+
+.detail-section {
+    margin-bottom: 2rem;
+}
+
+.detail-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--background-color);
+    border-radius: 0.5rem;
+}
+
+.detail-item strong {
+    color: var(--text-primary);
+}
+
+.detail-item span {
+    font-family: 'Courier New', monospace;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.proof-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.proof-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--background-color);
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--success-color);
+}
+
+.proof-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--success-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.proof-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.proof-content p {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.proof-content code {
+    display: block;
+    background: var(--surface-color);
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    word-break: break-all;
+}
+
+.status-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.status-check {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--background-color);
+    border-radius: 0.5rem;
+}
+
+.status-check i {
+    font-size: 1.25rem;
+}
+
+.text-success {
+    color: var(--success-color);
+}
+
+.verification-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.verification-help {
+    margin-top: 3rem;
+}
+
+.verification-help h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--primary-color);
+}
+
+.help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.help-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--surface-color);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-light);
+}
+
+.help-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.help-content h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.help-content p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .proof-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .verification-actions {
+        flex-direction: column;
+    }
+    
+    .help-item {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style> 

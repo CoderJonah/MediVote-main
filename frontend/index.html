@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediVote - Secure Blockchain Voting</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-vote-yea"></i>
+                <span>MediVote</span>
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="nav-link active">Home</a>
+                <a href="register.html" class="nav-link">Register</a>
+                <a href="vote.html" class="nav-link">Vote</a>
+                <a href="verify.html" class="nav-link">Verify</a>
+                <a href="results.html" class="nav-link">Results</a>
+                <a href="admin.html" class="nav-link">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <h1>Revolutionary Blockchain Voting System</h1>
+                    <p>Experience the future of secure, transparent, and verifiable elections with MediVote's advanced cryptographic security.</p>
+                    <div class="hero-buttons">
+                        <a href="register.html" class="btn btn-primary">Register to Vote</a>
+                        <a href="vote.html" class="btn btn-secondary">Cast Your Vote</a>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <div class="security-badge">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>256-bit Encryption</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="container">
+                <h2>Advanced Security Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-user-secret"></i>
+                        </div>
+                        <h3>Zero-Knowledge Proofs</h3>
+                        <p>Verify eligibility without revealing identity using advanced cryptographic protocols.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <h3>Homomorphic Encryption</h3>
+                        <p>Count votes without decrypting individual ballots, ensuring complete privacy.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-signature"></i>
+                        </div>
+                        <h3>Blind Signatures</h3>
+                        <p>Anonymous ballot authorization preventing double voting and coercion.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-cubes"></i>
+                        </div>
+                        <h3>Blockchain Verification</h3>
+                        <p>Immutable vote storage with tamper-proof records and full auditability.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-id-card"></i>
+                        </div>
+                        <h3>Self-Sovereign Identity</h3>
+                        <p>Decentralized identity management with verifiable credentials.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                        <h3>End-to-End Verification</h3>
+                        <p>Mathematical proof of election integrity with individual vote receipts.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="system-status">
+            <div class="container">
+                <h2>System Status</h2>
+                <div class="status-grid" id="statusGrid">
+                    <div class="status-item">
+                        <div class="status-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="status-info">
+                            <h3>Backend API</h3>
+                            <span class="status-badge" id="backendStatus">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="status-info">
+                            <h3>Database</h3>
+                            <span class="status-badge" id="databaseStatus">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-icon">
+                            <i class="fas fa-cube"></i>
+                        </div>
+                        <div class="status-info">
+                            <h3>Blockchain</h3>
+                            <span class="status-badge" id="blockchainStatus">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-icon">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                        <div class="status-info">
+                            <h3>Cache</h3>
+                            <span class="status-badge" id="cacheStatus">Checking...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="quick-actions">
+            <div class="container">
+                <h2>Quick Actions</h2>
+                <div class="action-cards">
+                    <div class="action-card">
+                        <i class="fas fa-user-plus"></i>
+                        <h3>Register as Voter</h3>
+                        <p>Create your secure voter account with SSI credentials</p>
+                        <a href="register.html" class="btn btn-outline">Register Now</a>
+                    </div>
+                    <div class="action-card">
+                        <i class="fas fa-vote-yea"></i>
+                        <h3>Cast Your Vote</h3>
+                        <p>Participate in active elections securely and anonymously</p>
+                        <a href="vote.html" class="btn btn-outline">Vote Now</a>
+                    </div>
+                    <div class="action-card">
+                        <i class="fas fa-search"></i>
+                        <h3>Verify Your Vote</h3>
+                        <p>Confirm your vote was recorded correctly using your receipt</p>
+                        <a href="verify.html" class="btn btn-outline">Verify Vote</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>MediVote</h4>
+                    <p>Revolutionary blockchain-based voting system with advanced cryptographic security.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Security</h4>
+                    <ul>
+                        <li>Zero-Knowledge Proofs</li>
+                        <li>Homomorphic Encryption</li>
+                        <li>Blind Signatures</li>
+                        <li>Blockchain Verification</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <p>Email: info@medivote.com</p>
+                    <p>Phone: +1 (555) 123-4567</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MediVote. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js?v=1.1"></script>
+</body>
+</html> 

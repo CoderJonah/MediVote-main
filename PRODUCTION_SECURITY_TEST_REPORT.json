@@ -1,0 +1,141 @@
+{
+  "timestamp": "2025-07-14T02:38:42.321766",
+  "overall": {
+    "total_tests": 12,
+    "passed": 2,
+    "failed": 10,
+    "success_rate": 16.666666666666664
+  },
+  "categories": {
+    "Authentication": {
+      "passed": 0,
+      "failed": 3,
+      "total": 3
+    },
+    "Authorization": {
+      "passed": 0,
+      "failed": 1,
+      "total": 1
+    },
+    "Session": {
+      "passed": 0,
+      "failed": 2,
+      "total": 2
+    },
+    "Input Validation": {
+      "passed": 2,
+      "failed": 1,
+      "total": 3
+    },
+    "Audit": {
+      "passed": 0,
+      "failed": 2,
+      "total": 2
+    },
+    "Security Headers": {
+      "passed": 0,
+      "failed": 1,
+      "total": 1
+    }
+  },
+  "detailed_results": [
+    {
+      "category": "Authentication",
+      "test": "Invalid Credentials Rejection",
+      "passed": false,
+      "details": "Status: 422",
+      "error": ""
+    },
+    {
+      "category": "Authentication",
+      "test": "Valid Admin Login",
+      "passed": false,
+      "details": "Status: 422, Response: {\"detail\":[{\"type\":\"string_type\",\"loc\":[\"body\",\"device_fingerprint\"],\"msg\":\"Input should be a valid ",
+      "error": ""
+    },
+    {
+      "category": "Authentication",
+      "test": "Rate Limiting Protection",
+      "passed": false,
+      "details": "Rate limiting triggered after multiple failures",
+      "error": ""
+    },
+    {
+      "category": "Authorization",
+      "test": "Admin Session Required",
+      "passed": false,
+      "details": "Admin session not available for testing",
+      "error": ""
+    },
+    {
+      "category": "Session",
+      "test": "Session Creation and Validation",
+      "passed": false,
+      "details": "Login failed: 422",
+      "error": ""
+    },
+    {
+      "category": "Session",
+      "test": "Session Logout and Invalidation",
+      "passed": false,
+      "details": "No admin session available",
+      "error": ""
+    },
+    {
+      "category": "Input Validation",
+      "test": "SQL Injection Protection",
+      "passed": true,
+      "details": "Blocked 3/3 attempts",
+      "error": ""
+    },
+    {
+      "category": "Input Validation",
+      "test": "XSS Protection in User Creation",
+      "passed": false,
+      "details": "Could not obtain admin token",
+      "error": ""
+    },
+    {
+      "category": "Input Validation",
+      "test": "Malformed JSON Handling",
+      "passed": true,
+      "details": "Status: 422",
+      "error": ""
+    },
+    {
+      "category": "Audit",
+      "test": "Login Event Logging",
+      "passed": false,
+      "details": "Login failed: 422",
+      "error": ""
+    },
+    {
+      "category": "Audit",
+      "test": "Failed Login Event Logging",
+      "passed": false,
+      "details": "Failed login attempt did not fail as expected",
+      "error": ""
+    },
+    {
+      "category": "Security Headers",
+      "test": "Security Headers Present",
+      "passed": false,
+      "details": "Present: 0, Missing: 5",
+      "error": ""
+    }
+  ],
+  "security_assessment": {
+    "level": "LOW",
+    "production_ready": false,
+    "critical_issues": [
+      "Authentication tests not all passing (0.0%)",
+      "Authorization tests not all passing (0.0%)",
+      "Session tests not all passing (0.0%)",
+      "Multiple security systems failing"
+    ],
+    "recommendations": [
+      "Fix authentication system issues immediately",
+      "Review and fix authorization controls"
+    ]
+  }
+}

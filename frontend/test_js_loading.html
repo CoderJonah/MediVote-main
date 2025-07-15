@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JavaScript Loading Test</title>
+</head>
+<body>
+    <h1>JavaScript Loading Test</h1>
+    <div id="results"></div>
+    
+    <script src="js/main.js"></script>
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        // Test if MediVoteAPI is defined
+        if (typeof MediVoteAPI !== 'undefined') {
+            resultsDiv.innerHTML += '<p style="color: green;">✅ MediVoteAPI is loaded correctly!</p>';
+            
+            // Test API call
+            MediVoteAPI.get('/api/status')
+                .then(data => {
+                    resultsDiv.innerHTML += '<p style="color: green;">✅ API call successful!</p>';
+                    resultsDiv.innerHTML += '<p>System Status: ' + data.status + '</p>';
+                    resultsDiv.innerHTML += '<p>Active Ballots: ' + data.statistics.active_ballots + '</p>';
+                })
+                .catch(error => {
+                    resultsDiv.innerHTML += '<p style="color: red;">❌ API call failed: ' + error.message + '</p>';
+                });
+        } else {
+            resultsDiv.innerHTML += '<p style="color: red;">❌ MediVoteAPI is not defined!</p>';
+        }
+        
+        // Test other classes
+        if (typeof AlertSystem !== 'undefined') {
+            resultsDiv.innerHTML += '<p style="color: green;">✅ AlertSystem is loaded correctly!</p>';
+        } else {
+            resultsDiv.innerHTML += '<p style="color: red;">❌ AlertSystem is not defined!</p>';
+        }
+        
+        if (typeof SystemStatus !== 'undefined') {
+            resultsDiv.innerHTML += '<p style="color: green;">✅ SystemStatus is loaded correctly!</p>';
+        } else {
+            resultsDiv.innerHTML += '<p style="color: red;">❌ SystemStatus is not defined!</p>';
+        }
+    </script>
+</body>
+</html> 

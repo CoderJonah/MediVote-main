@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voter Registration - MediVote</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-vote-yea"></i>
+                <span>MediVote</span>
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="register.html" class="nav-link active">Register</a>
+                <a href="vote.html" class="nav-link">Vote</a>
+                <a href="verify.html" class="nav-link">Verify</a>
+                <a href="results.html" class="nav-link">Results</a>
+                <a href="admin.html" class="nav-link">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="form-container">
+                <h1 class="text-center mb-4">
+                    <i class="fas fa-user-plus"></i>
+                    Voter Registration
+                </h1>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <div>
+                        <strong>Secure Registration:</strong> Your identity will be verified using Self-Sovereign Identity (SSI) 
+                        protocols and stored using advanced cryptographic protection.
+                    </div>
+                </div>
+
+                <div id="alertContainer"></div>
+
+                <form id="registrationForm">
+                    <div class="form-group">
+                        <label for="fullName">Full Name *</label>
+                        <input type="text" id="fullName" name="fullName" required 
+                               placeholder="Enter your full legal name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" required 
+                               placeholder="Enter your email address">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password *</label>
+                        <input type="password" id="password" name="password" required 
+                               placeholder="Create a secure password">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password *</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required 
+                               placeholder="Confirm your password">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone Number *</label>
+                        <input type="tel" id="phone" name="phone" required 
+                               placeholder="Enter your phone number">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address *</label>
+                        <textarea id="address" name="address" required 
+                                  placeholder="Enter your full address"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dateOfBirth">Date of Birth *</label>
+                        <input type="date" id="dateOfBirth" name="dateOfBirth" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="identityDocument">Identity Document Number *</label>
+                        <input type="text" id="identityDocument" name="identityDocument" required 
+                               placeholder="Driver's License, Passport, or National ID">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="terms" name="terms" required>
+                            I agree to the <a href="#" style="color: var(--primary-color);">Terms of Service</a> 
+                            and <a href="#" style="color: var(--primary-color);">Privacy Policy</a>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="eligibility" name="eligibility" required>
+                            I confirm that I am eligible to vote and have not registered elsewhere
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                            <i class="fas fa-times"></i>
+                            Clear Form
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-user-plus"></i>
+                            Register to Vote
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="security-features mt-4">
+                <h2 class="text-center mb-3">Registration Security Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-id-card"></i>
+                        </div>
+                        <h3>Self-Sovereign Identity</h3>
+                        <p>Your identity is cryptographically secured using decentralized identity protocols.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h3>Privacy Protection</h3>
+                        <p>Personal information is encrypted and stored securely with zero-knowledge proofs.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-certificate"></i>
+                        </div>
+                        <h3>Verifiable Credentials</h3>
+                        <p>Receive tamper-proof digital credentials that verify your voting eligibility.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>MediVote</h4>
+                    <p>Revolutionary blockchain-based voting system with advanced cryptographic security.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li>Registration Help</li>
+                        <li>Technical Support</li>
+                        <li>Security Information</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li>Terms of Service</li>
+                        <li>Privacy Policy</li>
+                        <li>Election Laws</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MediVote. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js?v=1.2"></script>
+    <script src="js/register.js?v=1.2"></script>
+</body>
+</html> 

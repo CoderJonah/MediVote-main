@@ -1,0 +1,215 @@
+{
+  "timestamp": "2025-07-13T22:27:50.607620",
+  "summary": {
+    "total": 29,
+    "passed": 17,
+    "failed": 12,
+    "success_rate": 58.620689655172406
+  },
+  "results": [
+    {
+      "test": "Config missing app_name",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:49.985986"
+    },
+    {
+      "test": "Config missing version",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:49.986487"
+    },
+    {
+      "test": "Config missing description",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:49.986645"
+    },
+    {
+      "test": "Config missing author",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:49.986773"
+    },
+    {
+      "test": "Config missing url",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:49.986877"
+    },
+    {
+      "test": "Missing class MSIBuilder",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.035378"
+    },
+    {
+      "test": "Missing def create_msi",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.035636"
+    },
+    {
+      "test": "Missing def download_dependencies",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.035977"
+    },
+    {
+      "test": "Missing def create_installer_files",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.036639"
+    },
+    {
+      "test": "Missing def build_complete_installer",
+      "passed": false,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.038019"
+    },
+    {
+      "test": "Build requirements readable",
+      "passed": true,
+      "details": "Found 46 dependencies",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.111526"
+    },
+    {
+      "test": "MSI tool: pywin32",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.112434"
+    },
+    {
+      "test": "Script readable: simple_install.py",
+      "passed": true,
+      "details": "Size: 21354 chars",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.158201"
+    },
+    {
+      "test": "simple_install.py has install logic",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.172000"
+    },
+    {
+      "test": "Script readable: setup.py",
+      "passed": true,
+      "details": "Size: 15040 chars",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.209263"
+    },
+    {
+      "test": "setup.py has install logic",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.210813"
+    },
+    {
+      "test": "Script readable: install_medivote.bat",
+      "passed": true,
+      "details": "Size: 15078 chars",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.248605"
+    },
+    {
+      "test": "install_medivote.bat has download logic",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.250093"
+    },
+    {
+      "test": "install_medivote.bat has install logic",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.251192"
+    },
+    {
+      "test": "Platform support: Windows batch file",
+      "passed": true,
+      "details": "File: install_medivote.bat",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.267961"
+    },
+    {
+      "test": "Platform support: Unix shell script",
+      "passed": true,
+      "details": "File: setup.sh",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.279872"
+    },
+    {
+      "test": "Platform support: PowerShell script",
+      "passed": false,
+      "details": "Missing: install.ps1",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.298500"
+    },
+    {
+      "test": "Platform support: Unix makefile",
+      "passed": false,
+      "details": "Missing: Makefile",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.302541"
+    },
+    {
+      "test": "Dependencies in requirements.txt",
+      "passed": true,
+      "details": "Count: 38",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.412574"
+    },
+    {
+      "test": "Dependencies in requirements_build.txt",
+      "passed": true,
+      "details": "Count: 28",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.445185"
+    },
+    {
+      "test": "Dependencies in package.json",
+      "passed": true,
+      "details": "Count: 1",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.488489"
+    },
+    {
+      "test": "Installation docs in README.md",
+      "passed": true,
+      "details": "Found 5 install keywords",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.523783"
+    },
+    {
+      "test": "Installation docs in INSTALLATION_IMPROVEMENTS_SUMMARY.md",
+      "passed": true,
+      "details": "Found 5 install keywords",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.560618"
+    },
+    {
+      "test": "Installation docs in PROFESSIONAL_INSTALLER_SUMMARY.md",
+      "passed": true,
+      "details": "Found 5 install keywords",
+      "error": null,
+      "timestamp": "2025-07-13T22:27:50.601088"
+    }
+  ],
+  "errors": []
+}
