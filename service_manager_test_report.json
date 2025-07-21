@@ -1,0 +1,362 @@
+{
+  "timestamp": "2025-07-21T17:19:44.931953",
+  "summary": {
+    "total_tests": 36,
+    "passed_tests": 16,
+    "failed_tests": 20,
+    "success_rate": 44.44444444444444,
+    "assessment": "\u274c POOR - Service Manager has significant issues"
+  },
+  "categories": {
+    "STARTUP": {
+      "passed": 1,
+      "failed": 0
+    },
+    "CONNECTIVITY": {
+      "passed": 1,
+      "failed": 0
+    },
+    "API": {
+      "passed": 8,
+      "failed": 0
+    },
+    "OPERATIONS": {
+      "passed": 3,
+      "failed": 0
+    },
+    "SSE": {
+      "passed": 0,
+      "failed": 1
+    },
+    "RESOURCES": {
+      "passed": 0,
+      "failed": 1
+    },
+    "PORTS": {
+      "passed": 1,
+      "failed": 13
+    },
+    "ERROR_HANDLING": {
+      "passed": 0,
+      "failed": 2
+    },
+    "CONCURRENCY": {
+      "passed": 0,
+      "failed": 1
+    },
+    "MEMORY": {
+      "passed": 1,
+      "failed": 0
+    },
+    "CLEANUP": {
+      "passed": 0,
+      "failed": 1
+    },
+    "UI": {
+      "passed": 0,
+      "failed": 1
+    },
+    "SHUTDOWN": {
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "results": [
+    {
+      "category": "STARTUP",
+      "test": "Service Manager Process",
+      "passed": true,
+      "details": "Process started successfully",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:04.837244"
+    },
+    {
+      "category": "CONNECTIVITY",
+      "test": "HTTP Server Response",
+      "passed": true,
+      "details": "Status: 200",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:06.894651"
+    },
+    {
+      "category": "API",
+      "test": "Status Endpoint",
+      "passed": true,
+      "details": "Got 7 services",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:09.039691"
+    },
+    {
+      "category": "API",
+      "test": "Service backend Status",
+      "passed": true,
+      "details": "Status: running",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:09.039691"
+    },
+    {
+      "category": "API",
+      "test": "Service blockchain_node_1 Status",
+      "passed": true,
+      "details": "Status: running",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:09.039691"
+    },
+    {
+      "category": "API",
+      "test": "Service blockchain_node_2 Status",
+      "passed": true,
+      "details": "Status: running",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:09.039691"
+    },
+    {
+      "category": "API",
+      "test": "Service incentive_system Status",
+      "passed": true,
+      "details": "Status: running",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:09.041195"
+    },
+    {
+      "category": "API",
+      "test": "Service network_coordinator Status",
+      "passed": true,
+      "details": "Status: running",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:09.041195"
+    },
+    {
+      "category": "API",
+      "test": "Service network_dashboard Status",
+      "passed": true,
+      "details": "Status: running",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:09.041195"
+    },
+    {
+      "category": "API",
+      "test": "Service frontend Status",
+      "passed": true,
+      "details": "Status: running",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:09.041195"
+    },
+    {
+      "category": "OPERATIONS",
+      "test": "Restart Backend",
+      "passed": true,
+      "details": "Response: {'success': True, 'error': None}",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:15.119634"
+    },
+    {
+      "category": "OPERATIONS",
+      "test": "Stop Frontend",
+      "passed": true,
+      "details": "Response: {'success': True, 'error': None}",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:19.203625"
+    },
+    {
+      "category": "OPERATIONS",
+      "test": "Start Frontend",
+      "passed": true,
+      "details": "Response: {'success': True, 'error': None}",
+      "error": null,
+      "timestamp": "2025-07-21T17:17:21.237527"
+    },
+    {
+      "category": "SSE",
+      "test": "Events Endpoint",
+      "passed": false,
+      "details": "",
+      "error": "(\"Connection broken: ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None)\", ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))",
+      "timestamp": "2025-07-21T17:19:07.845705"
+    },
+    {
+      "category": "RESOURCES",
+      "test": "Status API",
+      "passed": false,
+      "details": "",
+      "error": "HTTPConnectionPool(host='localhost', port=8090): Max retries exceeded with url: /status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002B1CA66E410>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))",
+      "timestamp": "2025-07-21T17:19:11.919859"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8001",
+      "passed": true,
+      "details": "Open",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:11.920860"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8080",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:12.926065"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8082",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:13.940010"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8083",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:14.946187"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8084",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:15.947809"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8546",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:16.952723"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8547",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:17.968343"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8090",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:18.973310"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8091",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:19.987493"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8093",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:20.988649"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8094",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:21.996356"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8095",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:23.000333"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8096",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:24.014660"
+    },
+    {
+      "category": "PORTS",
+      "test": "Port 8098",
+      "passed": false,
+      "details": "Closed",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:25.021852"
+    },
+    {
+      "category": "ERROR_HANDLING",
+      "test": "Invalid Service ID",
+      "passed": false,
+      "details": "",
+      "error": "HTTPConnectionPool(host='localhost', port=8090): Max retries exceeded with url: /restart/invalid_service (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002B1CA66F430>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))",
+      "timestamp": "2025-07-21T17:19:29.069102"
+    },
+    {
+      "category": "ERROR_HANDLING",
+      "test": "Invalid Endpoint",
+      "passed": false,
+      "details": "",
+      "error": "HTTPConnectionPool(host='localhost', port=8090): Max retries exceeded with url: /invalid_endpoint (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002B1CA66F3A0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))",
+      "timestamp": "2025-07-21T17:19:33.094276"
+    },
+    {
+      "category": "CONCURRENCY",
+      "test": "Concurrent Restart Operations",
+      "passed": false,
+      "details": "Success: 0/3",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:37.154599"
+    },
+    {
+      "category": "MEMORY",
+      "test": "Service Manager Memory Usage",
+      "passed": true,
+      "details": "Memory: 26.4 MB",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:40.857821"
+    },
+    {
+      "category": "CLEANUP",
+      "test": "Process Cleanup",
+      "passed": false,
+      "details": "",
+      "error": "object of type 'generator' has no len()",
+      "timestamp": "2025-07-21T17:19:40.857821"
+    },
+    {
+      "category": "UI",
+      "test": "Dashboard Content",
+      "passed": false,
+      "details": "",
+      "error": "HTTPConnectionPool(host='localhost', port=8090): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002B1CA66F850>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))",
+      "timestamp": "2025-07-21T17:19:44.923916"
+    },
+    {
+      "category": "SHUTDOWN",
+      "test": "Service Manager Shutdown",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-21T17:19:44.928952"
+    }
+  ],
+  "errors": [
+    "[SSE] Events Endpoint: (\"Connection broken: ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None)\", ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))",
+    "[RESOURCES] Status API: HTTPConnectionPool(host='localhost', port=8090): Max retries exceeded with url: /status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002B1CA66E410>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))",
+    "[ERROR_HANDLING] Invalid Service ID: HTTPConnectionPool(host='localhost', port=8090): Max retries exceeded with url: /restart/invalid_service (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002B1CA66F430>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))",
+    "[ERROR_HANDLING] Invalid Endpoint: HTTPConnectionPool(host='localhost', port=8090): Max retries exceeded with url: /invalid_endpoint (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002B1CA66F3A0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))",
+    "[CLEANUP] Process Cleanup: object of type 'generator' has no len()",
+    "[UI] Dashboard Content: HTTPConnectionPool(host='localhost', port=8090): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002B1CA66F850>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+  ]
+}

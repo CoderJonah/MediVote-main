@@ -2,22 +2,24 @@
   "node": {
     "name": "MediVote Node 2",
     "port": 8547,
-    "rpc_port": 8548,
+    "rpc_port": 8547,
+    "http_port": 8547,
     "max_peers": 50,
     "sync_interval": 30,
-    "block_time": 15
+    "block_time": 15,
+    "enable_http": true,
+    "enable_rpc": true
   },
   "network": {
     "bootstrap_nodes": [
-      "node1.medivote.net:8545",
-      "node2.medivote.net:8545",
-      "node3.medivote.net:8545"
+      "localhost:8546",
+      "localhost:8547"
     ],
     "network_id": "medivote_mainnet",
     "genesis_block": "0x0000000000000000000000000000000000000000000000000000000000000000"
   },
   "blockchain": {
-    "rpc_url": "http://localhost:8548",
+    "rpc_url": "http://localhost:8547",
     "private_key": null,
     "gas_limit": 3000000,
     "gas_price": "20 gwei"

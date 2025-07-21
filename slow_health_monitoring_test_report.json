@@ -1,0 +1,59 @@
+{
+  "test_suite": "Slow Health Monitoring Test",
+  "timestamp": "2025-07-21T19:40:58.168424",
+  "duration_seconds": 57.11391520500183,
+  "total_tests": 5,
+  "passed_tests": 5,
+  "success_rate": 100.0,
+  "results": [
+    {
+      "category": "HEALTH",
+      "test_name": "Endpoint Available",
+      "passed": true,
+      "details": "Status: 200",
+      "error": null
+    },
+    {
+      "category": "STRUCTURE",
+      "test_name": "All Services Present",
+      "passed": true,
+      "details": "Found 7 services",
+      "error": null
+    },
+    {
+      "category": "STRUCTURE",
+      "test_name": "Health Fields Complete",
+      "passed": true,
+      "details": "All required fields present",
+      "error": null
+    },
+    {
+      "category": "MONITORING",
+      "test_name": "Health Data Updates",
+      "passed": true,
+      "details": "Updated: 7/7 (100.0%)",
+      "error": null
+    },
+    {
+      "category": "INTERVAL",
+      "test_name": "Health Check Timing",
+      "passed": true,
+      "details": "Average: 33.4s, 100.0% reasonable",
+      "error": null
+    },
+    {
+      "category": "CONSISTENCY",
+      "test_name": "Service Coverage",
+      "passed": true,
+      "details": "Both endpoints have 7 services",
+      "error": null
+    },
+    {
+      "category": "CONSISTENCY",
+      "test_name": "Health Integration",
+      "passed": true,
+      "details": "100.0% of services have health info",
+      "error": null
+    }
+  ]
+}

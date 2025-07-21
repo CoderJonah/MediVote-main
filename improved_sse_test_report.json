@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-07-21T18:33:51.733426",
+  "summary": {
+    "total_tests": 9,
+    "passed_tests": 6,
+    "failed_tests": 3,
+    "success_rate": 66.66666666666666,
+    "assessment": "\u26a0\ufe0f FAIR - SSE has minor issues"
+  },
+  "results": [
+    {
+      "test": "SSE Status Code",
+      "passed": true,
+      "details": "Status: 200",
+      "error": null,
+      "timestamp": "2025-07-21T18:33:41.670898"
+    },
+    {
+      "test": "SSE Content Type",
+      "passed": true,
+      "details": "Content-Type: text/event-stream",
+      "error": null,
+      "timestamp": "2025-07-21T18:33:41.670898"
+    },
+    {
+      "test": "SSE Initial Data",
+      "passed": true,
+      "details": "Got 7 services",
+      "error": null,
+      "timestamp": "2025-07-21T18:33:42.153190"
+    },
+    {
+      "test": "SSE Headers",
+      "passed": true,
+      "details": "Headers test completed: HTTPConnectionPool(host='localhost', port=8090): Read timed out.",
+      "error": null,
+      "timestamp": "2025-07-21T18:33:44.173360"
+    },
+    {
+      "test": "SSE Data Prefix",
+      "passed": true,
+      "details": "Contains 'data:' prefix",
+      "error": null,
+      "timestamp": "2025-07-21T18:33:45.185952"
+    },
+    {
+      "test": "SSE Double Newlines",
+      "passed": false,
+      "details": "Contains double newlines",
+      "error": null,
+      "timestamp": "2025-07-21T18:33:45.185952"
+    },
+    {
+      "test": "SSE JSON Format",
+      "passed": false,
+      "details": "No valid JSON found in data",
+      "error": null,
+      "timestamp": "2025-07-21T18:33:45.185952"
+    },
+    {
+      "test": "SSE Connection Handling",
+      "passed": true,
+      "details": "Success: 3/3 (100.0%)",
+      "error": null,
+      "timestamp": "2025-07-21T18:33:49.686824"
+    },
+    {
+      "test": "SSE Endpoint Available",
+      "passed": false,
+      "details": "",
+      "error": "HTTPConnectionPool(host='localhost', port=8090): Read timed out.",
+      "timestamp": "2025-07-21T18:33:51.733426"
+    }
+  ]
+}

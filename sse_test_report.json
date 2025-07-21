@@ -1,0 +1,54 @@
+{
+  "timestamp": "2025-07-21T17:56:57.028238",
+  "summary": {
+    "total_tests": 6,
+    "passed_tests": 4,
+    "failed_tests": 2,
+    "success_rate": 66.66666666666666,
+    "assessment": "\u26a0\ufe0f SSE has minor issues"
+  },
+  "results": [
+    {
+      "test": "SSE Connection",
+      "passed": true,
+      "details": "Status: 200, Content-Type: text/event-stream",
+      "error": null,
+      "timestamp": "2025-07-21T17:56:49.342692"
+    },
+    {
+      "test": "SSE Content Type",
+      "passed": true,
+      "details": "Content-Type: text/event-stream",
+      "error": null,
+      "timestamp": "2025-07-21T17:56:49.342692"
+    },
+    {
+      "test": "SSE Data Flow",
+      "passed": true,
+      "details": "Read 100 bytes",
+      "error": null,
+      "timestamp": "2025-07-21T17:56:49.997661"
+    },
+    {
+      "test": "SSE Threading",
+      "passed": true,
+      "details": "Thread completed: 50",
+      "error": null,
+      "timestamp": "2025-07-21T17:56:52.661926"
+    },
+    {
+      "test": "SSE Endpoint",
+      "passed": false,
+      "details": "",
+      "error": "HTTPConnectionPool(host='localhost', port=8090): Read timed out.",
+      "timestamp": "2025-07-21T17:56:53.669821"
+    },
+    {
+      "test": "SSE Stability",
+      "passed": false,
+      "details": "Success: 0/5 (0.0%)",
+      "error": null,
+      "timestamp": "2025-07-21T17:56:57.028238"
+    }
+  ]
+}

@@ -81,6 +81,7 @@ class MediVoteBlockchainNode:
         self.blockchain_service: Optional[BlockchainService] = None
         self.is_running = False
         self.sync_thread: Optional[threading.Thread] = None
+        self.start_time = datetime.utcnow()
         
         # Load or create configuration
         self.config = self._load_config()
@@ -298,6 +299,57 @@ class MediVoteBlockchainNode:
                 logger.error(f"Error in shutdown handler: {e}")
                 return web.json_response({"error": str(e)}, status=500)
         
+        async def root_handler(request):
+            """Root handler that displays node information"""
+            status = self.get_node_status()
+            # Calculate uptime
+            uptime_seconds = int((datetime.utcnow() - self.start_time).total_seconds()) if hasattr(self, 'start_time') else 0
+            running_status = "Running" if status.get('is_running', False) else "Stopped"
+            html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MediVote Blockchain Node</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }}
+        .container {{ max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; }}
+        h1 {{ color: #667eea; }}
+        .info {{ background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }}
+        .status {{ color: #28a745; font-weight: bold; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MediVote Blockchain Node</h1>
+        <div class="info">
+            <h2>Node Information</h2>
+            <p><strong>Node ID:</strong> {status.get('node_id', 'N/A')}</p>
+            <p><strong>Network:</strong> {status.get('network_id', 'N/A')}</p>
+            <p><strong>Status:</strong> <span class="status">{running_status}</span></p>
+            <p><strong>Connected Peers:</strong> {status.get('peers_connected', 0)}</p>
+            <p><strong>Uptime:</strong> {uptime_seconds} seconds</p>
+            <p><strong>Blocks Processed:</strong> {status.get('blocks_processed', 0)}</p>
+            <p><strong>Votes Processed:</strong> {status.get('votes_processed', 0)}</p>
+        </div>
+        <div class="info">
+            <h2>Available Endpoints</h2>
+            <ul>
+                <li><a href="/status">/status</a> - Get node status (JSON)</li>
+                <li><a href="/peers">/peers</a> - Get connected peers (JSON)</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
+            """
+            return web.Response(text=html, content_type='text/html')
+        
+        async def favicon_handler(request):
+            """Return empty favicon to prevent 404"""
+            return web.Response(status=204)  # No Content
+        
+        app.router.add_get('/', root_handler)
+        app.router.add_get('/favicon.ico', favicon_handler)
         app.router.add_get('/status', status_handler)
         app.router.add_get('/peers', peers_handler)
         app.router.add_post('/shutdown', shutdown_handler)

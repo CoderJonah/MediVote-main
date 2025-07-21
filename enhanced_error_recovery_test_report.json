@@ -1,0 +1,362 @@
+{
+  "timestamp": "2025-07-21T19:28:29.083491",
+  "summary": {
+    "total_tests": 40,
+    "passed_tests": 38,
+    "failed_tests": 2,
+    "success_rate": 95.0,
+    "assessment": "\ud83c\udfc6 EXCELLENT - Enhanced Error Recovery is production-ready!"
+  },
+  "categories": {
+    "HEALTH": {
+      "passed": 15,
+      "failed": 0
+    },
+    "STATUS": {
+      "passed": 8,
+      "failed": 0
+    },
+    "FAILURE": {
+      "passed": 2,
+      "failed": 0
+    },
+    "RECOVERY": {
+      "passed": 11,
+      "failed": 0
+    },
+    "MONITORING": {
+      "passed": 0,
+      "failed": 1
+    },
+    "RESILIENCE": {
+      "passed": 1,
+      "failed": 0
+    },
+    "STABILITY": {
+      "passed": 1,
+      "failed": 1
+    }
+  },
+  "results": [
+    {
+      "category": "HEALTH",
+      "test": "Health Endpoint Available",
+      "passed": true,
+      "details": "Got health data for 7 services",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "backend Health Structure",
+      "passed": true,
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753140371.644053, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "backend Recovery Fields",
+      "passed": true,
+      "details": "Recovery info: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "blockchain_node_1 Health Structure",
+      "passed": true,
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753140374.6623647, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "blockchain_node_1 Recovery Fields",
+      "passed": true,
+      "details": "Recovery info: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "blockchain_node_2 Health Structure",
+      "passed": true,
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753140376.6752198, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "blockchain_node_2 Recovery Fields",
+      "passed": true,
+      "details": "Recovery info: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "incentive_system Health Structure",
+      "passed": true,
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753140378.6963937, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "incentive_system Recovery Fields",
+      "passed": true,
+      "details": "Recovery info: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "network_coordinator Health Structure",
+      "passed": true,
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753140380.7025163, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "network_coordinator Recovery Fields",
+      "passed": true,
+      "details": "Recovery info: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "network_dashboard Health Structure",
+      "passed": true,
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753140382.7181234, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "network_dashboard Recovery Fields",
+      "passed": true,
+      "details": "Recovery info: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "frontend Health Structure",
+      "passed": true,
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753140384.7387214, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "HEALTH",
+      "test": "frontend Recovery Fields",
+      "passed": true,
+      "details": "Recovery info: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:52.290810"
+    },
+    {
+      "category": "STATUS",
+      "test": "backend Health Info",
+      "passed": true,
+      "details": "Health: healthy",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:54.320902"
+    },
+    {
+      "category": "STATUS",
+      "test": "blockchain_node_1 Health Info",
+      "passed": true,
+      "details": "Health: healthy",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:54.320902"
+    },
+    {
+      "category": "STATUS",
+      "test": "blockchain_node_2 Health Info",
+      "passed": true,
+      "details": "Health: healthy",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:54.320902"
+    },
+    {
+      "category": "STATUS",
+      "test": "incentive_system Health Info",
+      "passed": true,
+      "details": "Health: healthy",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:54.320902"
+    },
+    {
+      "category": "STATUS",
+      "test": "network_coordinator Health Info",
+      "passed": true,
+      "details": "Health: healthy",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:54.320902"
+    },
+    {
+      "category": "STATUS",
+      "test": "network_dashboard Health Info",
+      "passed": true,
+      "details": "Health: healthy",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:54.320902"
+    },
+    {
+      "category": "STATUS",
+      "test": "frontend Health Info",
+      "passed": true,
+      "details": "Health: healthy",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:54.320902"
+    },
+    {
+      "category": "STATUS",
+      "test": "Health Information Coverage",
+      "passed": true,
+      "details": "Coverage: 7/7 (100.0%)",
+      "error": null,
+      "timestamp": "2025-07-21T19:26:54.320902"
+    },
+    {
+      "category": "FAILURE",
+      "test": "Failure Count Tracking",
+      "passed": true,
+      "details": "Failure count: 0",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:08.394631"
+    },
+    {
+      "category": "FAILURE",
+      "test": "Recovery Attempts Tracking",
+      "passed": true,
+      "details": "Recovery attempts: 0",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:08.394631"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "backend Auto-Recovery",
+      "passed": true,
+      "details": "Auto-recovery: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:10.445931"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "blockchain_node_1 Auto-Recovery",
+      "passed": true,
+      "details": "Auto-recovery: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:10.445931"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "blockchain_node_2 Auto-Recovery",
+      "passed": true,
+      "details": "Auto-recovery: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:10.445931"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "incentive_system Auto-Recovery",
+      "passed": true,
+      "details": "Auto-recovery: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:10.445931"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "network_coordinator Auto-Recovery",
+      "passed": true,
+      "details": "Auto-recovery: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:10.445931"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "network_dashboard Auto-Recovery",
+      "passed": true,
+      "details": "Auto-recovery: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:10.445931"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "frontend Auto-Recovery",
+      "passed": true,
+      "details": "Auto-recovery: True",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:10.445931"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "Auto-Recovery Coverage",
+      "passed": true,
+      "details": "Coverage: 7/7 (100.0%)",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:10.445931"
+    },
+    {
+      "category": "MONITORING",
+      "test": "Health Data Updates",
+      "passed": false,
+      "details": "Updated: 0/7 (0.0%)",
+      "error": null,
+      "timestamp": "2025-07-21T19:27:19.515057"
+    },
+    {
+      "category": "RESILIENCE",
+      "test": "Concurrent Operation Handling",
+      "passed": true,
+      "details": "Success rate: 15/15 (100.0%)",
+      "error": null,
+      "timestamp": "2025-07-21T19:28:19.749481"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "Invalid Service Handling",
+      "passed": true,
+      "details": "Status: 200",
+      "error": null,
+      "timestamp": "2025-07-21T19:28:21.826439"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "Invalid Endpoint Handling",
+      "passed": true,
+      "details": "Status: 404",
+      "error": null,
+      "timestamp": "2025-07-21T19:28:23.918480"
+    },
+    {
+      "category": "RECOVERY",
+      "test": "Malformed Request Handling",
+      "passed": true,
+      "details": "Status: 200",
+      "error": null,
+      "timestamp": "2025-07-21T19:28:25.999708"
+    },
+    {
+      "category": "STABILITY",
+      "test": "Service Stability",
+      "passed": true,
+      "details": "Running: 7/7 (100.0%)",
+      "error": null,
+      "timestamp": "2025-07-21T19:28:28.810326"
+    },
+    {
+      "category": "STABILITY",
+      "test": "Memory Usage",
+      "passed": false,
+      "details": "",
+      "error": "(pid=332)",
+      "timestamp": "2025-07-21T19:28:29.081489"
+    }
+  ]
+}
