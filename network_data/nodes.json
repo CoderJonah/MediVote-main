@@ -6,7 +6,7 @@
     "rpc_port": 8546,
     "node_type": "full_node",
     "version": "1.0.0",
-    "last_seen": "2025-07-22T15:07:43.154347",
+    "last_seen": "2025-07-22T15:18:44.118732",
     "is_active": true,
     "votes_processed": 0,
     "blocks_processed": 0
@@ -18,7 +18,7 @@
     "rpc_port": 8546,
     "node_type": "full_node",
     "version": "1.0.0",
-    "last_seen": "2025-07-22T15:07:43.421438",
+    "last_seen": "2025-07-22T15:18:44.371235",
     "is_active": true,
     "votes_processed": 0,
     "blocks_processed": 0
