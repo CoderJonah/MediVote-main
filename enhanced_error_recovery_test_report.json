@@ -1,10 +1,10 @@
 {
-  "timestamp": "2025-07-21T19:28:29.083491",
+  "timestamp": "2025-07-21T20:58:01.692213",
   "summary": {
     "total_tests": 40,
-    "passed_tests": 38,
-    "failed_tests": 2,
-    "success_rate": 95.0,
+    "passed_tests": 39,
+    "failed_tests": 1,
+    "success_rate": 97.5,
     "assessment": "\ud83c\udfc6 EXCELLENT - Enhanced Error Recovery is production-ready!"
   },
   "categories": {
@@ -25,8 +25,8 @@
       "failed": 0
     },
     "MONITORING": {
-      "passed": 0,
-      "failed": 1
+      "passed": 1,
+      "failed": 0
     },
     "RESILIENCE": {
       "passed": 1,
@@ -44,15 +44,15 @@
       "passed": true,
       "details": "Got health data for 7 services",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.675128"
     },
     {
       "category": "HEALTH",
       "test": "backend Health Structure",
       "passed": true,
-      "details": "Health info: {'status': 'healthy', 'last_check': 1753140371.644053, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753145777.1772075, 'uptime': 0.0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'process_healthy': True, 'port_healthy': True, 'http_healthy': True, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.675128"
     },
     {
       "category": "HEALTH",
@@ -60,15 +60,15 @@
       "passed": true,
       "details": "Recovery info: True",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.675128"
     },
     {
       "category": "HEALTH",
       "test": "blockchain_node_1 Health Structure",
       "passed": true,
-      "details": "Health info: {'status': 'healthy', 'last_check': 1753140374.6623647, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753145777.178207, 'uptime': 0.0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'process_healthy': True, 'port_healthy': True, 'http_healthy': False, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.675128"
     },
     {
       "category": "HEALTH",
@@ -76,15 +76,15 @@
       "passed": true,
       "details": "Recovery info: True",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.675128"
     },
     {
       "category": "HEALTH",
       "test": "blockchain_node_2 Health Structure",
       "passed": true,
-      "details": "Health info: {'status': 'healthy', 'last_check': 1753140376.6752198, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753145777.178207, 'uptime': 0.0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'process_healthy': True, 'port_healthy': True, 'http_healthy': False, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
@@ -92,15 +92,15 @@
       "passed": true,
       "details": "Recovery info: True",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
       "test": "incentive_system Health Structure",
       "passed": true,
-      "details": "Health info: {'status': 'healthy', 'last_check': 1753140378.6963937, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753145777.178207, 'uptime': 0.0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'process_healthy': True, 'port_healthy': True, 'http_healthy': False, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
@@ -108,15 +108,15 @@
       "passed": true,
       "details": "Recovery info: True",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
       "test": "network_coordinator Health Structure",
       "passed": true,
-      "details": "Health info: {'status': 'healthy', 'last_check': 1753140380.7025163, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753145777.1792068, 'uptime': 0.0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'process_healthy': True, 'port_healthy': True, 'http_healthy': False, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
@@ -124,15 +124,15 @@
       "passed": true,
       "details": "Recovery info: True",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
       "test": "network_dashboard Health Structure",
       "passed": true,
-      "details": "Health info: {'status': 'healthy', 'last_check': 1753140382.7181234, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753145779.2104962, 'uptime': 0.0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'process_healthy': True, 'port_healthy': True, 'http_healthy': True, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
@@ -140,15 +140,15 @@
       "passed": true,
       "details": "Recovery info: True",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
       "test": "frontend Health Structure",
       "passed": true,
-      "details": "Health info: {'status': 'healthy', 'last_check': 1753140384.7387214, 'uptime': 0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
+      "details": "Health info: {'status': 'healthy', 'last_check': 1753145783.782742, 'uptime': 0.0, 'restart_count': 0, 'failure_count': 0, 'last_failure': None, 'recovery_attempts': 0, 'process_healthy': True, 'port_healthy': False, 'http_healthy': True, 'auto_recovery_enabled': True, 'max_recovery_attempts': 3}",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "HEALTH",
@@ -156,7 +156,7 @@
       "passed": true,
       "details": "Recovery info: True",
       "error": null,
-      "timestamp": "2025-07-21T19:26:52.290810"
+      "timestamp": "2025-07-21T20:56:25.676132"
     },
     {
       "category": "STATUS",
@@ -164,7 +164,7 @@
       "passed": true,
       "details": "Health: healthy",
       "error": null,
-      "timestamp": "2025-07-21T19:26:54.320902"
+      "timestamp": "2025-07-21T20:56:27.693774"
     },
     {
       "category": "STATUS",
@@ -172,7 +172,7 @@
       "passed": true,
       "details": "Health: healthy",
       "error": null,
-      "timestamp": "2025-07-21T19:26:54.320902"
+      "timestamp": "2025-07-21T20:56:27.693774"
     },
     {
       "category": "STATUS",
@@ -180,7 +180,7 @@
       "passed": true,
       "details": "Health: healthy",
       "error": null,
-      "timestamp": "2025-07-21T19:26:54.320902"
+      "timestamp": "2025-07-21T20:56:27.693774"
     },
     {
       "category": "STATUS",
@@ -188,7 +188,7 @@
       "passed": true,
       "details": "Health: healthy",
       "error": null,
-      "timestamp": "2025-07-21T19:26:54.320902"
+      "timestamp": "2025-07-21T20:56:27.693774"
     },
     {
       "category": "STATUS",
@@ -196,7 +196,7 @@
       "passed": true,
       "details": "Health: healthy",
       "error": null,
-      "timestamp": "2025-07-21T19:26:54.320902"
+      "timestamp": "2025-07-21T20:56:27.693774"
     },
     {
       "category": "STATUS",
@@ -204,7 +204,7 @@
       "passed": true,
       "details": "Health: healthy",
       "error": null,
-      "timestamp": "2025-07-21T19:26:54.320902"
+      "timestamp": "2025-07-21T20:56:27.693774"
     },
     {
       "category": "STATUS",
@@ -212,7 +212,7 @@
       "passed": true,
       "details": "Health: healthy",
       "error": null,
-      "timestamp": "2025-07-21T19:26:54.320902"
+      "timestamp": "2025-07-21T20:56:27.693774"
     },
     {
       "category": "STATUS",
@@ -220,7 +220,7 @@
       "passed": true,
       "details": "Coverage: 7/7 (100.0%)",
       "error": null,
-      "timestamp": "2025-07-21T19:26:54.320902"
+      "timestamp": "2025-07-21T20:56:27.693774"
     },
     {
       "category": "FAILURE",
@@ -228,7 +228,7 @@
       "passed": true,
       "details": "Failure count: 0",
       "error": null,
-      "timestamp": "2025-07-21T19:27:08.394631"
+      "timestamp": "2025-07-21T20:56:41.732397"
     },
     {
       "category": "FAILURE",
@@ -236,7 +236,7 @@
       "passed": true,
       "details": "Recovery attempts: 0",
       "error": null,
-      "timestamp": "2025-07-21T19:27:08.394631"
+      "timestamp": "2025-07-21T20:56:41.732397"
     },
     {
       "category": "RECOVERY",
@@ -244,7 +244,7 @@
       "passed": true,
       "details": "Auto-recovery: True",
       "error": null,
-      "timestamp": "2025-07-21T19:27:10.445931"
+      "timestamp": "2025-07-21T20:56:43.748859"
     },
     {
       "category": "RECOVERY",
@@ -252,7 +252,7 @@
       "passed": true,
       "details": "Auto-recovery: True",
       "error": null,
-      "timestamp": "2025-07-21T19:27:10.445931"
+      "timestamp": "2025-07-21T20:56:43.748859"
     },
     {
       "category": "RECOVERY",
@@ -260,7 +260,7 @@
       "passed": true,
       "details": "Auto-recovery: True",
       "error": null,
-      "timestamp": "2025-07-21T19:27:10.445931"
+      "timestamp": "2025-07-21T20:56:43.748859"
     },
     {
       "category": "RECOVERY",
@@ -268,7 +268,7 @@
       "passed": true,
       "details": "Auto-recovery: True",
       "error": null,
-      "timestamp": "2025-07-21T19:27:10.445931"
+      "timestamp": "2025-07-21T20:56:43.748859"
     },
     {
       "category": "RECOVERY",
@@ -276,7 +276,7 @@
       "passed": true,
       "details": "Auto-recovery: True",
       "error": null,
-      "timestamp": "2025-07-21T19:27:10.445931"
+      "timestamp": "2025-07-21T20:56:43.748859"
     },
     {
       "category": "RECOVERY",
@@ -284,7 +284,7 @@
       "passed": true,
       "details": "Auto-recovery: True",
       "error": null,
-      "timestamp": "2025-07-21T19:27:10.445931"
+      "timestamp": "2025-07-21T20:56:43.749861"
     },
     {
       "category": "RECOVERY",
@@ -292,7 +292,7 @@
       "passed": true,
       "details": "Auto-recovery: True",
       "error": null,
-      "timestamp": "2025-07-21T19:27:10.445931"
+      "timestamp": "2025-07-21T20:56:43.749861"
     },
     {
       "category": "RECOVERY",
@@ -300,15 +300,15 @@
       "passed": true,
       "details": "Coverage: 7/7 (100.0%)",
       "error": null,
-      "timestamp": "2025-07-21T19:27:10.445931"
+      "timestamp": "2025-07-21T20:56:43.749861"
     },
     {
       "category": "MONITORING",
       "test": "Health Data Updates",
-      "passed": false,
-      "details": "Updated: 0/7 (0.0%)",
+      "passed": true,
+      "details": "Updated: 5/7 (71.4%)",
       "error": null,
-      "timestamp": "2025-07-21T19:27:19.515057"
+      "timestamp": "2025-07-21T20:56:52.821114"
     },
     {
       "category": "RESILIENCE",
@@ -316,7 +316,7 @@
       "passed": true,
       "details": "Success rate: 15/15 (100.0%)",
       "error": null,
-      "timestamp": "2025-07-21T19:28:19.749481"
+      "timestamp": "2025-07-21T20:57:53.053060"
     },
     {
       "category": "RECOVERY",
@@ -324,7 +324,7 @@
       "passed": true,
       "details": "Status: 200",
       "error": null,
-      "timestamp": "2025-07-21T19:28:21.826439"
+      "timestamp": "2025-07-21T20:57:55.089105"
     },
     {
       "category": "RECOVERY",
@@ -332,7 +332,7 @@
       "passed": true,
       "details": "Status: 404",
       "error": null,
-      "timestamp": "2025-07-21T19:28:23.918480"
+      "timestamp": "2025-07-21T20:57:57.107777"
     },
     {
       "category": "RECOVERY",
@@ -340,7 +340,7 @@
       "passed": true,
       "details": "Status: 200",
       "error": null,
-      "timestamp": "2025-07-21T19:28:25.999708"
+      "timestamp": "2025-07-21T20:57:59.177822"
     },
     {
       "category": "STABILITY",
@@ -348,7 +348,7 @@
       "passed": true,
       "details": "Running: 7/7 (100.0%)",
       "error": null,
-      "timestamp": "2025-07-21T19:28:28.810326"
+      "timestamp": "2025-07-21T20:58:01.348813"
     },
     {
       "category": "STABILITY",
@@ -356,7 +356,7 @@
       "passed": false,
       "details": "",
       "error": "(pid=332)",
-      "timestamp": "2025-07-21T19:28:29.081489"
+      "timestamp": "2025-07-21T20:58:01.692213"
     }
   ]
 }

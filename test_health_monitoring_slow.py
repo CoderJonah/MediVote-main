@@ -63,8 +63,9 @@ class SlowHealthMonitoringTest:
                 health_data = response.json()
                 
                 # Check if we have data for all expected services
-                expected_services = ['backend', 'blockchain_node_1', 'blockchain_node_2', 
-                                   'incentive_system', 'network_coordinator', 'network_dashboard', 'frontend']
+                expected_services = ['backend', 'blockchain_node',
+                                   'incentive_system', 'network_coordinator',
+                                   'network_dashboard', 'frontend']
                 
                 missing_services = [service for service in expected_services if service not in health_data]
                 if missing_services:

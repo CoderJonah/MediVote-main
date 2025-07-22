@@ -105,7 +105,9 @@ class MediVoteBlockchainNode:
                 "rpc_port": 8546,
                 "max_peers": 50,
                 "sync_interval": 30,
-                "block_time": 15
+                "block_time": 15,
+                "register_with_incentive_system": False,
+                "incentive_system_url": "http://localhost:8082"
             },
             "network": {
                 "bootstrap_nodes": [
@@ -242,8 +244,12 @@ class MediVoteBlockchainNode:
             
             self.is_running = True
             
-            # Start RPC server as background task
-            asyncio.create_task(self._start_rpc_server())
+            # Start RPC server as background task and store reference
+            self.rpc_task = asyncio.create_task(self._start_rpc_server())
+            
+            # Register with incentive system if configured
+            if self.config.get("node", {}).get("register_with_incentive_system", False):
+                asyncio.create_task(self._register_with_incentive_system())
             
             logger.info("Blockchain node started successfully")
             return True
@@ -254,58 +260,73 @@ class MediVoteBlockchainNode:
     
     async def _start_rpc_server(self):
         """Start RPC server for node communication"""
-        app = web.Application()
+        try:
+            app = web.Application()
+            
+            async def status_handler(request):
+                return web.json_response(self.get_node_status())
+            
+            async def peers_handler(request):
+                peers_data = []
+                for peer in self.peers.values():
+                    peers_data.append({
+                        "peer_id": peer.peer_id,
+                        "address": peer.address,
+                        "port": peer.port,
+                        "is_active": peer.is_active,
+                        "last_seen": peer.last_seen.isoformat() if peer.last_seen else None,
+                        "node_type": peer.node_type
+                    })
+                return web.json_response(peers_data)
         
-        async def status_handler(request):
-            return web.json_response(self.get_node_status())
-        
-        async def peers_handler(request):
-            peers_data = []
-            for peer in self.peers.values():
-                peers_data.append({
-                    "peer_id": peer.peer_id,
-                    "address": peer.address,
-                    "port": peer.port,
-                    "is_active": peer.is_active,
-                    "last_seen": peer.last_seen.isoformat() if peer.last_seen else None,
-                    "node_type": peer.node_type
-                })
-            return web.json_response(peers_data)
-        
-        async def shutdown_handler(request):
-            """Handle graceful shutdown request"""
-            try:
-                # Check if this is a local request (for security)
-                client_ip = request.remote
-                if client_ip not in ["127.0.0.1", "localhost", "::1"]:
-                    return web.json_response({"error": "Unauthorized"}, status=403)
-                
-                logger.warning("Received shutdown request - Node will lose credibility points!")
-                
-                # Return warning about credibility loss
-                response_data = {
-                    "message": "Shutdown initiated",
-                    "warning": "Shutting down this node will result in loss of credibility points and network participation rewards.",
-                    "credibility_impact": "You will lose accumulated credibility points and may need to re-establish trust in the network.",
-                    "recommendation": "Consider running the node continuously to maintain network participation and earn rewards."
-                }
-                
-                # Schedule graceful shutdown
-                asyncio.create_task(self._graceful_shutdown())
-                
-                return web.json_response(response_data)
-                
-            except Exception as e:
-                logger.error(f"Error in shutdown handler: {e}")
-                return web.json_response({"error": str(e)}, status=500)
-        
-        async def root_handler(request):
-            """Root handler that displays node information"""
-            status = self.get_node_status()
-            # Calculate uptime
-            uptime_seconds = int((datetime.utcnow() - self.start_time).total_seconds()) if hasattr(self, 'start_time') else 0
-            running_status = "Running" if status.get('is_running', False) else "Stopped"
-            html = f"""
+            async def shutdown_handler(request):
+                """Handle graceful shutdown request"""
+                try:
+                    # Check if this is a local request (for security)
+                    client_ip = request.remote
+                    if client_ip not in ["127.0.0.1", "localhost", "::1"]:
+                        return web.json_response({"error": "Unauthorized"}, status=403)
+                    
+                    logger.warning("Received shutdown request - Node will lose credibility points!")
+                    
+                    # Return warning about credibility loss
+                    response_data = {
+                        "message": "Blockchain node shutdown initiated",
+                        "status": "shutting_down",
+                        "warning": "Shutting down this node will result in loss of credibility points and network participation rewards.",
+                        "credibility_impact": "You will lose accumulated credibility points and may need to re-establish trust in the network.",
+                        "recommendation": "Consider running the node continuously to maintain network participation and earn rewards.",
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                    
+                    # Send response immediately
+                    response = web.json_response(response_data, status=200)
+                    
+                    # Schedule graceful shutdown after response is sent
+                    async def delayed_shutdown():
+                        await asyncio.sleep(0.3)  # Brief delay to ensure response is sent
+                        await self._graceful_shutdown()
+                        # Signal shutdown via SIGTERM
+                        import os
+                        import signal
+                        os.kill(os.getpid(), signal.SIGTERM)
+                    
+                    # Schedule shutdown
+                    asyncio.create_task(delayed_shutdown())
+                    
+                    return response
+                    
+                except Exception as e:
+                    logger.error(f"Error in shutdown handler: {e}")
+                    return web.json_response({"error": str(e)}, status=500)
+            
+            async def root_handler(request):
+                """Root handler that displays node information"""
+                status = self.get_node_status()
+                # Calculate uptime
+                uptime_seconds = int((datetime.utcnow() - self.start_time).total_seconds()) if hasattr(self, 'start_time') else 0
+                running_status = "Running" if status.get('is_running', False) else "Stopped"
+                html = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -341,24 +362,27 @@ class MediVoteBlockchainNode:
     </div>
 </body>
 </html>
-            """
-            return web.Response(text=html, content_type='text/html')
-        
-        async def favicon_handler(request):
-            """Return empty favicon to prevent 404"""
-            return web.Response(status=204)  # No Content
-        
-        app.router.add_get('/', root_handler)
-        app.router.add_get('/favicon.ico', favicon_handler)
-        app.router.add_get('/status', status_handler)
-        app.router.add_get('/peers', peers_handler)
-        app.router.add_post('/shutdown', shutdown_handler)
-        
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', self.config['node']['rpc_port'])
-        await site.start()
-        logger.info(f"RPC server started on port {self.config['node']['rpc_port']}")
+                """
+                return web.Response(text=html, content_type='text/html')
+            
+            async def favicon_handler(request):
+                """Return empty favicon to prevent 404"""
+                return web.Response(status=204)  # No Content
+            
+            app.router.add_get('/', root_handler)
+            app.router.add_get('/favicon.ico', favicon_handler)
+            app.router.add_get('/status', status_handler)
+            app.router.add_get('/peers', peers_handler)
+            app.router.add_post('/shutdown', shutdown_handler)
+            
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, '0.0.0.0', self.config['node']['rpc_port'])
+            await site.start()
+            logger.info(f"RPC server started on port {self.config['node']['rpc_port']}")
+        except Exception as e:
+            logger.error(f"Failed to start RPC server: {e}")
+            raise
 
     async def _graceful_shutdown(self):
         """Perform graceful shutdown with credibility loss warning"""
@@ -371,8 +395,8 @@ class MediVoteBlockchainNode:
             logger.warning("- Loss of potential rewards and incentives")
             logger.warning("================================")
             
-            # Wait a moment for the warning to be logged
-            await asyncio.sleep(2)
+            # Shorter wait to ensure HTTP request doesn't timeout
+            await asyncio.sleep(0.5)
             
             # Stop the node gracefully
             await self.stop()
@@ -466,6 +490,59 @@ class MediVoteBlockchainNode:
         except Exception as e:
             logger.error(f"Error getting election data: {e}")
             return None
+
+    async def _register_with_incentive_system(self):
+        """Register this node with the incentive system"""
+        try:
+            # Wait a moment for the RPC server to be fully ready
+            await asyncio.sleep(3)
+            
+            incentive_url = self.config.get("node", {}).get("incentive_system_url", "http://localhost:8082")
+            
+            # Generate a simple public key for demo purposes
+            public_key = f"pk_{secrets.token_hex(16)}"
+            
+            registration_data = {
+                "node_id": self.node_info.node_id,
+                "public_key": public_key,
+                "node_address": "localhost",
+                "node_port": self.config["node"]["rpc_port"]
+            }
+            
+            logger.info(f"Registering with incentive system at {incentive_url}...")
+            
+            # Make up to 3 attempts to register
+            for attempt in range(3):
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                            f"{incentive_url}/api/register-node",
+                            json=registration_data,
+                            timeout=10
+                        ) as response:
+                            
+                            if response.status == 200:
+                                data = await response.json()
+                                logger.info(f"Successfully registered with incentive system: {data.get('message', 'Registered')}")
+                                logger.info(f"Ballot limit: {data.get('ballot_limit', 'N/A')}, Min uptime: {data.get('min_uptime', 'N/A')} hours")
+                                return True
+                            else:
+                                error_data = await response.json()
+                                logger.warning(f"Failed to register with incentive system (attempt {attempt + 1}): {error_data.get('error', 'Unknown error')}")
+                                
+                except Exception as e:
+                    logger.warning(f"Registration attempt {attempt + 1} failed: {e}")
+                
+                # Wait before retry
+                if attempt < 2:
+                    await asyncio.sleep(5)
+            
+            logger.error("Failed to register with incentive system after 3 attempts")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error registering with incentive system: {e}")
+            return False
 
 async def main():
     """Main function to run the blockchain node"""

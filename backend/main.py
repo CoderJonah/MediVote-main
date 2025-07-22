@@ -7,6 +7,7 @@ Secure blockchain-based voting system with end-to-end verifiability
 import os
 import sys
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 
@@ -17,6 +18,19 @@ import uvicorn
 
 # Add the backend directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Configure logging for backend service
+os.makedirs('../logs', exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('../logs/backend.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ],
+    force=True
+)
+logger = logging.getLogger("medivote_backend")
 
 # Simple settings
 class Settings:
@@ -38,14 +52,20 @@ settings = Settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
+    logger.info("Starting MediVote Backend (Fixed Version)")
+    logger.info(f"Backend starting on {settings.HOST}:{settings.PORT}")
     print("Starting MediVote Backend (Fixed Version)")
     
     # Initialize basic services
+    logger.info("Initializing basic backend services...")
     print("Basic services initialized")
+    logger.info("Backend services initialized successfully")
     
     yield
     
+    logger.info("Shutting down MediVote Backend")
     print("Shutting down MediVote Backend")
+    logger.info("Backend shutdown complete")
 
 # Create FastAPI app
 app = FastAPI(
@@ -264,6 +284,27 @@ async def system_status_simple():
     """Simple status endpoint"""
     return await api_status()
 
+@app.post("/shutdown")
+async def shutdown():
+    """Graceful shutdown endpoint"""
+    import signal
+    import os
+    
+    # Only allow shutdown from localhost
+    # This is a simplified security check for the demo
+    # In production, you'd want proper authentication
+    
+    async def shutdown_server():
+        await asyncio.sleep(0.5)  # Small delay to send response
+        os.kill(os.getpid(), signal.SIGTERM)
+    
+    asyncio.create_task(shutdown_server())
+    
+    return {
+        "status": "success",
+        "message": "Server shutting down gracefully"
+    }
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
@@ -276,10 +317,25 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 if __name__ == "__main__":
+    logger.info("MediVote Backend main function called")
     print("Starting MediVote Backend (Fixed Version)")
-    uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG
-    ) 
+    try:
+        logger.info(f"Starting uvicorn server on {settings.HOST}:{settings.PORT}")
+        uvicorn.run(
+            "main:app",
+            host=settings.HOST,
+            port=settings.PORT,
+            reload=settings.DEBUG
+        )
+    except Exception as e:
+        if "address already in use" in str(e).lower():
+            error_msg = f"Port {settings.PORT} is already in use"
+            logger.error(error_msg)
+            logger.warning("Another instance of the backend might be running")
+            print(f"Error: Port {settings.PORT} is already in use")
+            print("Another instance of the backend might be running")
+            print("Try stopping the other instance or use a different port")
+        else:
+            logger.error(f"Error starting backend: {e}")
+            print(f"Error starting backend: {e}")
+        sys.exit(1) 

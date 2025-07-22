@@ -1,0 +1,77 @@
+{
+  "test_summary": {
+    "total_tests": 11,
+    "passed_tests": 7,
+    "failed_tests": 4,
+    "success_rate": "63.6%"
+  },
+  "test_results": [
+    {
+      "test": "Logging Import",
+      "success": true,
+      "details": "Service manager imports without logging errors",
+      "timestamp": "2025-07-22T09:38:00.942916"
+    },
+    {
+      "test": "Unicode Logging",
+      "success": true,
+      "details": "All 5 test messages logged without errors",
+      "timestamp": "2025-07-22T09:38:00.942916"
+    },
+    {
+      "test": "Backend Endpoint",
+      "success": false,
+      "details": "Shutdown endpoint code not found",
+      "timestamp": "2025-07-22T09:38:01.271693"
+    },
+    {
+      "test": "Blockchain Node Endpoint",
+      "success": false,
+      "details": "Shutdown endpoint code not found",
+      "timestamp": "2025-07-22T09:38:01.455730"
+    },
+    {
+      "test": "Incentive System Endpoint",
+      "success": false,
+      "details": "Shutdown endpoint code not found",
+      "timestamp": "2025-07-22T09:38:01.463266"
+    },
+    {
+      "test": "Network Coordinator Endpoint",
+      "success": false,
+      "details": "Shutdown endpoint code not found",
+      "timestamp": "2025-07-22T09:38:01.464268"
+    },
+    {
+      "test": "Tiered Shutdown Method",
+      "success": true,
+      "details": "_try_graceful_shutdown method exists",
+      "timestamp": "2025-07-22T09:38:01.466777"
+    },
+    {
+      "test": "Tier 1 Classification",
+      "success": true,
+      "details": "Tier 1 services properly classified",
+      "timestamp": "2025-07-22T09:38:01.469776"
+    },
+    {
+      "test": "Tier 2 Classification",
+      "success": true,
+      "details": "Tier 2 services properly classified",
+      "timestamp": "2025-07-22T09:38:01.469776"
+    },
+    {
+      "test": "Service-Specific Timeouts",
+      "success": true,
+      "details": "Service-specific timeout logic found",
+      "timestamp": "2025-07-22T09:38:01.469776"
+    },
+    {
+      "test": "Log Directory Creation",
+      "success": true,
+      "details": "logs/ directory exists",
+      "timestamp": "2025-07-22T09:38:01.469776"
+    }
+  ],
+  "timestamp": "2025-07-22T09:38:01.469776"
+}

@@ -1,33 +1,43 @@
 #!/usr/bin/env python3
 """
 MediVote Background Startup Script
-Runs all MediVote services in the background with individual dashboards
 """
 
 import asyncio
 import json
 import logging
 import os
-import sys
-import time
-import subprocess
-import threading
-import webbrowser
-from datetime import datetime
-from typing import Dict, List, Optional, Any
-from pathlib import Path
 import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+import queue
 import psutil
-from functools import partial  # <-- Add this import
+from datetime import datetime
+from typing import Dict, Any, List, Optional
+import http.server
+import socketserver
+import webbrowser
+import random
 
-# Configure logging
+# Configure logging with UTF-8 encoding support
+import sys
+import os
+
+# Create logs directory if it doesn't exist
+os.makedirs('logs', exist_ok=True)
+
+# Configure logging with proper encoding
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('medivote_background.log'),
-        logging.StreamHandler()
-    ]
+        logging.FileHandler('logs/medivote_background.log', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ],
+    force=True  # Force reconfiguration
 )
 logger = logging.getLogger(__name__)
 
@@ -35,128 +45,147 @@ class MediVoteBackgroundManager:
     """Manages all MediVote services running in background"""
     
     def __init__(self):
-        self.services: Dict[str, Dict[str, Any]] = {}
-        self.processes: Dict[str, subprocess.Popen] = {}
-        self.is_running = True  # Set to True to enable health monitoring
-        self.cpu_cache: Dict[int, float] = {}  # Cache CPU values by PID
-        self.memory_cache: Dict[int, float] = {}  # Cache memory values by PID
-        self.last_update: Dict[int, float] = {}  # Track last update time for each PID
-        self.stopped_services: set[str] = set() # Track services that have been stopped
-        self.service_pids: Dict[str, int] = {}  # Track current PIDs for each service
-        self._lock = threading.Lock()  # Thread safety for concurrent operations
+        """Initialize the MediVote background service manager"""
+        self.is_running = True
+        self.processes = {}
+        self.service_pids = {}
+        self.memory_cache: Dict[int, float] = {}
+        self.last_update: Dict[int, float] = {}
+        self.stopped_services: set[str] = set()
+        self._lock = threading.Lock()
+        self._shutdown_requested = False  # Add shutdown flag
         
         # Concurrent operation handling
-        self.service_locks: Dict[str, threading.Lock] = {}  # Service-specific locks
-        self.operation_queues: Dict[str, list] = {}  # Operation queues per service
-        self.active_operations: Dict[str, str] = {}  # Track active operations per service
+        self.service_locks = {}
+        self.operation_queues = {}
+        self.active_operations = {}
         
-        # Enhanced Error Recovery and Resilience (High Priority 3)
-        self.service_health: Dict[str, dict] = {}  # Track service health metrics
-        self.failure_counts: Dict[str, int] = {}  # Track consecutive failures per service
-        self.last_health_check: Dict[str, float] = {}  # Track last health check time
-        self.auto_recovery_enabled: Dict[str, bool] = {}  # Auto-recovery settings per service
-        self.recovery_attempts: Dict[str, int] = {}  # Track recovery attempts per service
-        self.max_recovery_attempts: Dict[str, int] = {}  # Max recovery attempts per service
-        self.health_check_interval = 10  # Health check interval in seconds (reduced for testing)
-        self.max_failures_before_disable = 5  # Max failures before disabling auto-recovery
+        # Health monitoring attributes
+        self.service_failures = {}
+        self.service_recovery_attempts = {}
+        self.service_last_failure = {}
+        self.service_uptime = {}
+        self.service_last_check = {}
+        self.last_health_check = {}
+        self.service_health = {}
+        self.failure_counts = {}
+        self.cpu_cache = {}  # Add missing CPU cache
         
-        # Initialize locks and queues for each service
-        for service_id in ["backend", "blockchain_node_1", "blockchain_node_2", 
-                          "incentive_system", "network_coordinator", "network_dashboard", "frontend"]:
-            self.service_locks[service_id] = threading.Lock()
-            self.operation_queues[service_id] = []
+        # Auto-recovery settings
+        self.auto_recovery_enabled = {}
+        self.auto_recovery_cooldown = 30  # seconds
+        self.max_failures_before_disable = 3
+        
+        # Health check settings
+        self.health_check_interval = 5  # seconds
+        self.health_check_timeout = 10  # seconds
+        
+        # Shutdown throttling to prevent HTTP timeout issues
+        self.last_shutdown_time = {}  # Track last shutdown time per service
+        self.shutdown_throttle_delay = 2.0  # Minimum seconds between shutdown requests
+        self.bulk_shutdown_mode = False  # Flag to indicate we're doing a bulk shutdown
+        
+        # Result queue for async operations
+        self.result_queue = queue.Queue()
+        
+        # Service configurations
+        self.service_configs = {
+            "backend": {
+                "name": "MediVote Backend",
+                "command": ["python", "backend/main.py"],
+                "port": 8001,
+                "dashboard_port": 8091,
+                "auto_restart": True,
+                "auto_recovery_enabled": True,  # Changed to True
+                "startup_delay": 3,
+                "log_file": "logs/backend.log"
+            },
+            "blockchain_node": {
+                "name": "Blockchain Node",
+                "command": ["python", "blockchain_node.py", "--config", "node_config_1.json"],
+                "port": 8546,
+                "dashboard_port": 8093,
+                "auto_restart": True,
+                "auto_recovery_enabled": True,  # Changed to True
+                "startup_delay": 2,
+                "log_file": "logs/blockchain_node.log"
+            },
+            "incentive_system": {
+                "name": "Node Incentive System",
+                "command": ["python", "node_incentive_system.py"],
+                "port": 8082,
+                "dashboard_port": 8095,
+                "auto_restart": True,
+                "auto_recovery_enabled": True,  # Changed to True
+                "startup_delay": 2,
+                "log_file": "logs/incentive_system.log"
+            },
+            "network_coordinator": {
+                "name": "Network Coordinator",
+                "command": ["python", "network_coordinator.py"],
+                "port": 8083,
+                "dashboard_port": 8096,
+                "auto_restart": True,
+                "auto_recovery_enabled": True,  # Changed to True
+                "startup_delay": 2,
+                "log_file": "logs/network_coordinator.log"
+            },
+            "network_dashboard": {
+                "name": "Network Dashboard",
+                "command": ["python", "network_dashboard.py"],
+                "port": 8084,
+                "dashboard_port": 8097,
+                "auto_restart": True,
+                "auto_recovery_enabled": True,  # Changed to True
+                "startup_delay": 2,
+                "log_file": "logs/network_dashboard.log"
+            },
+            "frontend": {
+                "name": "MediVote Frontend",
+                "command": ["python", "frontend/serve.py"],
+                "port": 8080,
+                "dashboard_port": 8098,
+                "auto_restart": True,
+                "auto_recovery_enabled": True,  # Changed to True
+                "startup_delay": 3,
+                "log_file": "logs/frontend.log"
+            }
+        }
+        
+        # Initialize auto-recovery status for all services
+        for service_id in self.service_configs:
+            self.auto_recovery_enabled[service_id] = self.service_configs[service_id]["auto_recovery_enabled"]
+            self.failure_counts[service_id] = 0
             self.service_health[service_id] = {
                 'status': 'unknown',
                 'last_check': 0,
                 'uptime': 0,
-                'restart_count': 0,
-                'failure_count': 0,
-                'last_failure': None,
-                'recovery_attempts': 0
+                'start_time': None,
+                'process_healthy': False,
+                'port_healthy': False,
+                'http_healthy': False
             }
-            self.failure_counts[service_id] = 0
-            self.last_health_check[service_id] = 0
-            self.auto_recovery_enabled[service_id] = True
-            self.recovery_attempts[service_id] = 0
-            self.max_recovery_attempts[service_id] = 3
         
-        # Service configurations with unique ports
-        self.service_configs = {
-            "backend": {
-                "name": "MediVote Backend",
-                "script": "backend/main.py",
-                "port": 8001,
-                "dashboard_port": 8091,
-                "log_file": "logs/backend.log",
-                "auto_restart": False,  # Changed from True to False
-                "startup_delay": 3
-            },
-            "blockchain_node_1": {
-                "name": "Blockchain Node 1",
-                "script": "blockchain_node.py",
-                "port": 8546,
-                "dashboard_port": 8093,
-                "log_file": "blockchain_node_1.log",
-                "auto_restart": True,
-                "startup_delay": 2,
-                "config_file": "node_config_1.json"
-            },
-            "blockchain_node_2": {
-                "name": "Blockchain Node 2", 
-                "script": "blockchain_node.py",
-                "port": 8547,
-                "dashboard_port": 8094,
-                "log_file": "blockchain_node_2.log",
-                "auto_restart": True,
-                "startup_delay": 2,
-                "config_file": "node_config_2.json"
-            },
-            "incentive_system": {
-                "name": "Node Incentive System",
-                "script": "node_incentive_system.py",
-                "port": 8082,
-                "dashboard_port": 8095,
-                "log_file": "node_incentive.log",
-                "auto_restart": True,
-                "startup_delay": 2
-            },
-            "network_coordinator": {
-                "name": "Network Coordinator",
-                "script": "network_coordinator.py",
-                "port": 8083,
-                "dashboard_port": 8096,
-                "log_file": "network_coordinator.log",
-                "auto_restart": True,
-                "startup_delay": 2
-            },
-            "network_dashboard": {
-                "name": "Network Dashboard",
-                "script": "network_dashboard.py",
-                "port": 8084,
-                "log_file": "network_dashboard.log",
-                "auto_restart": True,
-                "startup_delay": 2
-            },
-            "frontend": {
-                "name": "MediVote Frontend",
-                "script": "frontend/serve.py",
-                "port": 8080,
-                "dashboard_port": 8098,
-                "log_file": "logs/frontend.log",
-                "auto_restart": True,
-                "startup_delay": 3
-            }
-        }
+        # Initialize service locks and queues
+        for service_id in self.service_configs:
+            self.service_locks[service_id] = threading.Lock()
+            self.operation_queues[service_id] = []
         
-        # Credibility warnings
+        # Credibility warnings for critical services
         self.credibility_warnings = {
-            "blockchain_node_1": "WARNING: Shutting down this node will result in loss of credibility points and network participation rewards.",
-            "blockchain_node_2": "WARNING: Shutting down this node will result in loss of credibility points and network participation rewards.",
+            "backend": "WARNING: Shutting down the backend will disable API access.",
+            "frontend": "WARNING: Shutting down the frontend will disable web interface access.",
+            "blockchain_node": "WARNING: Shutting down blockchain node may affect voting integrity.",
             "incentive_system": "WARNING: Shutting down the incentive system will stop reward distribution and node reputation tracking.",
             "network_coordinator": "WARNING: Shutting down the coordinator will affect network discovery and node communication.",
-            "backend": "WARNING: Shutting down the backend will disable voting functionality and API access.",
-            "frontend": "WARNING: Shutting down the frontend will disable web interface access."
+            "network_dashboard": "WARNING: Shutting down the dashboard will disable network monitoring."
         }
+        
+        # Create node configurations
+        self._create_node_configs()
+        
+        # Start health monitoring - DON'T start it here as we're not in an async context yet
+        # It will be started in start_all_services()
     
     def _handle_concurrent_operation(self, service_id: str, operation: str, operation_func, *args, **kwargs):
         """Handle concurrent operations safely with queuing and service-specific locks"""
@@ -167,131 +196,100 @@ class MediVoteBackgroundManager:
         service_lock = self.service_locks[service_id]
         
         with service_lock:
-            # Check if there's already an active operation
+            # Check for conflicting operations
             if service_id in self.active_operations:
                 current_op = self.active_operations[service_id]
-                logger.warning(f"Service {service_id} has active operation '{current_op}', queuing '{operation}'")
                 
-                # Add operation to queue
-                self.operation_queues[service_id].append((operation, operation_func, args, kwargs))
-                return False
+                # Allow compatible operations
+                if operation == "restart" and current_op == "restart":
+                    # Allow concurrent restart operations - they're idempotent
+                    logger.info(f"Allowing concurrent restart operation on {service_id}")
+                elif operation == "start" and current_op == "restart":
+                    # Allow start during restart (service might not be running)
+                    logger.info(f"Allowing start operation during restart for {service_id}")
+                elif operation == "restart" and current_op in ["start", "stop"]:
+                    # Allow restart to override start/stop
+                    logger.info(f"Restart operation overriding {current_op} for {service_id}")
+                else:
+                    logger.warning(f"Service {service_id} has active operation '{current_op}', rejecting '{operation}'")
+                    return False
             
             # Mark this operation as active
             self.active_operations[service_id] = operation
             logger.info(f"Starting operation '{operation}' on service {service_id}")
             
-            try:
-                # Execute the operation (handle both sync and async functions)
-                if asyncio.iscoroutinefunction(operation_func):
-                    # For async functions, we need to run them in an event loop
-                    try:
-                        loop = asyncio.get_event_loop()
-                        if loop.is_running():
-                            # If we're already in an event loop, create a task
-                            import concurrent.futures
-                            with concurrent.futures.ThreadPoolExecutor() as executor:
-                                future = executor.submit(asyncio.run, operation_func(*args, **kwargs))
-                                result = future.result(timeout=30)  # 30 second timeout
-                        else:
-                            result = loop.run_until_complete(operation_func(*args, **kwargs))
-                    except Exception as e:
-                        logger.error(f"Failed to execute async operation '{operation}' on service {service_id}: {e}")
-                        result = False
-                else:
-                    # For sync functions, call directly
-                    result = operation_func(*args, **kwargs)
-                
-                # Process queued operations
-                while self.operation_queues[service_id]:
-                    queued_op, queued_func, queued_args, queued_kwargs = self.operation_queues[service_id].pop(0)
-                    logger.info(f"Processing queued operation '{queued_op}' on service {service_id}")
-                    
-                    # Update active operation
-                    self.active_operations[service_id] = queued_op
-                    
-                    # Execute queued operation
-                    try:
-                        if asyncio.iscoroutinefunction(queued_func):
-                            # Handle async queued operations
-                            try:
-                                loop = asyncio.get_event_loop()
-                                if loop.is_running():
-                                    import concurrent.futures
-                                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                                        future = executor.submit(asyncio.run, queued_func(*queued_args, **queued_kwargs))
-                                        queued_result = future.result(timeout=30)
-                                else:
-                                    queued_result = loop.run_until_complete(queued_func(*queued_args, **queued_kwargs))
-                            except Exception as e:
-                                logger.error(f"Queued async operation '{queued_op}' failed on service {service_id}: {e}")
-                                queued_result = False
-                        else:
-                            # Handle sync queued operations
-                            queued_result = queued_func(*queued_args, **queued_kwargs)
-                        
-                        logger.info(f"Queued operation '{queued_op}' completed on service {service_id}")
-                    except Exception as e:
-                        logger.error(f"Queued operation '{queued_op}' failed on service {service_id}: {e}")
-                
-                return result
-                
-            except Exception as e:
-                logger.error(f"Operation '{operation}' failed on service {service_id}: {e}")
-                return False
-            finally:
-                # Clear active operation
-                if service_id in self.active_operations:
-                    del self.active_operations[service_id]
+        # Execute outside the lock to avoid deadlocks
+        try:
+            # Return the function to be called - let the caller handle async/sync
+            return operation_func, args, kwargs
+        finally:
+            # Clear active operation after operation completes (not in a background thread)
+            # This will be done by the caller after the operation completes
+            pass
     
     def _create_node_configs(self):
-        """Create unique node configurations to avoid port conflicts"""
-        for i in range(1, 3):
-            # Use the actual ports defined in service_configs
-            node_port = 8545 + i
-            rpc_port = 8546 + i - 1  # This will be 8546 for node 1, 8547 for node 2
-            
-            config = {
-                "node": {
-                    "name": f"MediVote Node {i}",
-                    "port": node_port,
-                    "rpc_port": rpc_port,
-                    "http_port": rpc_port,  # Add http_port for the web interface
-                    "max_peers": 50,
-                    "sync_interval": 30,
-                    "block_time": 15,
-                    "enable_http": True,  # Enable HTTP interface
-                    "enable_rpc": True    # Enable RPC interface
-                },
-                "network": {
-                    "bootstrap_nodes": [
-                        f"localhost:{8546}",
-                        f"localhost:{8547}"
-                    ],
-                    "network_id": "medivote_mainnet",
-                    "genesis_block": "0x0000000000000000000000000000000000000000000000000000000000000000"
-                },
-                "blockchain": {
-                    "rpc_url": f"http://localhost:{rpc_port}",
-                    "private_key": None,
-                    "gas_limit": 3000000,
-                    "gas_price": "20 gwei"
-                },
-                "storage": {
-                    "data_dir": f"./blockchain_data_{i}",
-                    "backup_interval": 3600,
-                    "max_storage_gb": 10
-                }
+        """Create node configuration for the blockchain node with network discovery"""
+        # Create config for single blockchain node with proper network registration
+        config = {
+            "node": {
+                "name": "MediVote Blockchain Node",
+                "port": 8545,
+                "rpc_port": 8546,
+                "http_port": 8546,  # HTTP interface port
+                "max_peers": 50,
+                "sync_interval": 30,
+                "block_time": 15,
+                "enable_http": True,  # Enable HTTP interface
+                "enable_rpc": True,   # Enable RPC interface
+                "register_with_coordinator": True,  # Auto-register with network coordinator
+                "coordinator_url": "http://localhost:8083",  # Network coordinator endpoint
+                "register_with_incentive_system": True,  # Auto-register with incentive system
+                "incentive_system_url": "http://localhost:8082"  # Incentive system endpoint
+            },
+            "network": {
+                "bootstrap_nodes": ["127.0.0.1:8083"],  # Include network coordinator
+                "network_id": "medivote_mainnet",
+                "genesis_block": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "auto_discovery": True,  # Enable automatic node discovery
+                "heartbeat_interval": 10  # Send heartbeat every 10 seconds
+            },
+            "blockchain": {
+                "rpc_url": "http://localhost:8546",
+                "private_key": None,
+                "gas_limit": 3000000,
+                "gas_price": "20 gwei"
+            },
+            "storage": {
+                "data_dir": "./blockchain_data",
+                "backup_interval": 3600,
+                "max_storage_gb": 10
             }
-            
-            config_file = f"node_config_{i}.json"
-            with open(config_file, 'w') as f:
-                json.dump(config, f, indent=2)
-            
-            # Ensure blockchain data directory exists
-            data_dir = f"./blockchain_data_{i}"
-            os.makedirs(data_dir, exist_ok=True)
-            
-            logger.info(f"Created node configuration: {config_file}")
+        }
+        
+        config_file = "node_config_1.json"
+        with open(config_file, 'w') as f:
+            json.dump(config, f, indent=2)
+        
+        # Create network data directory for node registration
+        network_data_dir = "./network_data"
+        os.makedirs(network_data_dir, exist_ok=True)
+        
+        # Create nodes.json file if it doesn't exist
+        nodes_file = os.path.join(network_data_dir, "nodes.json")
+        if not os.path.exists(nodes_file):
+            initial_nodes = {
+                "nodes": [],
+                "last_updated": datetime.now().isoformat()
+            }
+            with open(nodes_file, 'w') as f:
+                json.dump(initial_nodes, f, indent=2)
+        
+        # Ensure blockchain data directory exists
+        data_dir = "./blockchain_data"
+        os.makedirs(data_dir, exist_ok=True)
+        
+        logger.info(f"Created node configuration: {config_file}")
+        logger.info("Node configured for automatic network registration")
     
     def _record_service_failure(self, service_id: str, error_message: str):
         """Record a service failure for enhanced error recovery"""
@@ -339,9 +337,7 @@ class MediVoteBackgroundManager:
         current_time = time.time()
         
         # Check if we should perform health check (rate limiting)
-        # Only rate limit if we're not in the monitoring loop
         if current_time - self.last_health_check.get(service_id, 0) < self.health_check_interval:
-            # Don't update last_check if we're rate limited
             return True
         
         # Update the last check time
@@ -352,39 +348,40 @@ class MediVoteBackgroundManager:
             process_healthy = False
             if service_id in self.processes:
                 process = self.processes[service_id]
-                if process.poll() is None:  # Process is running
+                if process.poll() is None:  # Process is still running
                     process_healthy = True
             
             # Method 2: Port check
             port_healthy = False
-            try:
-                import socket
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(2)
-                result = sock.connect_ex(('localhost', config['port']))
-                sock.close()
-                port_healthy = (result == 0)
-            except Exception as e:
-                logger.debug(f"Port health check failed for {service_id}: {e}")
+            if "port" in config:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(2)
+                    result = sock.connect_ex(('localhost', config["port"]))
+                    sock.close()
+                    port_healthy = (result == 0)
+                except Exception:
+                    port_healthy = False
             
-            # Method 3: HTTP health check (for services with HTTP endpoints)
+            # Method 3: HTTP health check
             http_healthy = False
-            if service_id in ['backend', 'frontend', 'network_dashboard']:
+            if "port" in config and config["port"] in [8001, 8080, 8082, 8083, 8084]:
                 try:
                     import requests
-                    response = requests.get(f"http://localhost:{config['port']}/", timeout=3)
+                    response = requests.get(f"http://localhost:{config['port']}/health", timeout=3)
                     http_healthy = (response.status_code == 200)
-                except Exception as e:
-                    logger.debug(f"HTTP health check failed for {service_id}: {e}")
+                except Exception:
+                    http_healthy = False
             
             # Determine overall health
             is_healthy = process_healthy or port_healthy or http_healthy
             
-            # Update health metrics
+            # Update health metrics with proper None handling
             if service_id in self.service_health:
                 uptime = 0
-                if service_id in self.processes and self.processes[service_id].poll() is None:
-                    uptime = current_time - self.service_health[service_id].get('start_time', current_time)
+                start_time = self.service_health[service_id].get('start_time')
+                if start_time is not None and service_id in self.processes and self.processes[service_id].poll() is None:
+                    uptime = current_time - start_time
                 
                 self.service_health[service_id].update({
                     'status': 'healthy' if is_healthy else 'unhealthy',
@@ -395,12 +392,6 @@ class MediVoteBackgroundManager:
                     'http_healthy': http_healthy
                 })
             
-            if is_healthy:
-                self._record_service_success(service_id)
-                logger.debug(f"Service {service_id} health check passed")
-            else:
-                logger.warning(f"Service {service_id} health check failed")
-            
             return is_healthy
             
         except Exception as e:
@@ -408,39 +399,37 @@ class MediVoteBackgroundManager:
             return False
     
     async def _auto_recover_service(self, service_id: str) -> bool:
-        """Attempt automatic recovery of a failed service"""
-        if not self.auto_recovery_enabled.get(service_id, True):
-            logger.warning(f"Auto-recovery disabled for {service_id}")
-            return False
-        
-        if service_id not in self.recovery_attempts:
-            self.recovery_attempts[service_id] = 0
-        
-        if self.recovery_attempts[service_id] >= self.max_recovery_attempts.get(service_id, 3):
-            logger.error(f"Max recovery attempts reached for {service_id}")
-            return False
-        
-        self.recovery_attempts[service_id] += 1
-        logger.info(f"Attempting auto-recovery for {service_id} (attempt {self.recovery_attempts[service_id]})")
-        
+        """Automatically recover a failed service"""
         try:
-            # Stop the service first
-            await self.stop_service(service_id, force=True)
-            await asyncio.sleep(2)
+            # Check if auto-recovery is enabled for this service
+            if not self.auto_recovery_enabled.get(service_id, False):
+                logger.info(f"Auto-recovery disabled for {service_id}, skipping recovery attempt")
+                return False
             
-            # Start the service
+            # Check cooldown period
+            last_failure = self.service_last_failure.get(service_id, 0)
+            current_time = time.time()
+            if current_time - last_failure < self.auto_recovery_cooldown:
+                logger.info(f"Auto-recovery cooldown active for {service_id}, skipping recovery attempt")
+                return False
+            
+            logger.info(f"Attempting auto-recovery for {service_id}")
+            
+            # Attempt to restart the service
             success = await self.start_service(service_id)
             
             if success:
                 logger.info(f"Auto-recovery successful for {service_id}")
-                self.recovery_attempts[service_id] = 0
+                self._record_service_success(service_id)
                 return True
             else:
-                logger.error(f"Auto-recovery failed for {service_id}")
+                logger.warning(f"Auto-recovery failed for {service_id}")
+                self._record_service_failure(service_id, "Auto-recovery attempt failed")
                 return False
                 
         except Exception as e:
-            logger.error(f"Auto-recovery error for {service_id}: {e}")
+            logger.error(f"Error during auto-recovery for {service_id}: {e}")
+            self._record_service_failure(service_id, str(e))
             return False
     
     async def _monitor_all_services_health(self):
@@ -453,33 +442,47 @@ class MediVoteBackgroundManager:
                     try:
                         is_healthy = await self._check_service_health(service_id)
                         
-                        if not is_healthy and self.auto_recovery_enabled.get(service_id, True):
+                        if not is_healthy and self.auto_recovery_enabled.get(service_id, False):
                             logger.warning(f"Service {service_id} is unhealthy, attempting recovery")
                             await self._auto_recover_service(service_id)
                     
                     except Exception as e:
-                        logger.error(f"Health monitoring error for {service_id}: {e}")
+                        logger.error(f"Health check error for {service_id}: {e}")
+                        continue
                 
-                # Wait before next health check
-                logger.debug(f"Health check cycle complete, waiting {self.health_check_interval}s...")
+                # Wait before next health check cycle
                 await asyncio.sleep(self.health_check_interval)
                 
             except Exception as e:
-                logger.error(f"Health monitoring loop error: {e}")
-                await asyncio.sleep(10)  # Wait before retrying
+                logger.error(f"Error in main loop: {e}")
+                await asyncio.sleep(5)  # Wait before retrying
     
     def get_service_health_info(self, service_id: str) -> dict:
-        """Get detailed health information for a service"""
-        if service_id not in self.service_health:
+        """Get health information for a specific service"""
+        if service_id not in self.service_configs:
             return {}
         
-        health_info = self.service_health[service_id].copy()
-        health_info['auto_recovery_enabled'] = self.auto_recovery_enabled.get(service_id, True)
-        health_info['failure_count'] = self.failure_counts.get(service_id, 0)
-        health_info['recovery_attempts'] = self.recovery_attempts.get(service_id, 0)
-        health_info['max_recovery_attempts'] = self.max_recovery_attempts.get(service_id, 3)
+        # Use the service_health dictionary which is properly maintained
+        if service_id in self.service_health:
+            health_data = self.service_health[service_id].copy()
+            # Add additional fields
+            health_data['auto_recovery_enabled'] = self.auto_recovery_enabled.get(service_id, False)
+            health_data['restart_count'] = self.service_recovery_attempts.get(service_id, 0)
+            health_data['recovery_attempts'] = self.service_recovery_attempts.get(service_id, 0)
+            return health_data
         
-        return health_info
+        # Fallback for services not yet checked
+        current_time = time.time()
+        return {
+            'status': 'unknown',
+            'last_check': 0,
+            'uptime': 0,
+            'restart_count': 0,
+            'failure_count': 0,
+            'last_failure': None,
+            'recovery_attempts': 0,
+            'auto_recovery_enabled': self.auto_recovery_enabled.get(service_id, False)
+        }
     
     def get_all_health_info(self) -> dict:
         """Get health information for all services"""
@@ -498,8 +501,7 @@ class MediVoteBackgroundManager:
         # Start services in order
         startup_order = [
             "backend",
-            "blockchain_node_1", 
-            "blockchain_node_2",
+            "blockchain_node", 
             "incentive_system",
             "network_coordinator",
             "network_dashboard",
@@ -530,15 +532,77 @@ class MediVoteBackgroundManager:
             return False
         
         # Use concurrent operation handler to prevent race conditions
-        return self._handle_concurrent_operation(service_id, "start", self._start_service_impl, service_id)
+        result = self._handle_concurrent_operation(service_id, "start", self._start_service_impl, service_id)
+        
+        if result is False:
+            return False
+        
+        # Result is a tuple of (function, args, kwargs)
+        if isinstance(result, tuple) and len(result) == 3:
+            func, args, kwargs = result
+            try:
+                # Execute the async function
+                start_result = await func(*args, **kwargs)
+                return start_result
+            finally:
+                # Clear active operation after completion
+                if service_id in self.active_operations:
+                    del self.active_operations[service_id]
+        
+        return False
+    
+    def is_valid_service(self, service_id: str) -> bool:
+        """Check if a service ID is valid"""
+        return service_id in self.service_configs
     
     async def _start_service_impl(self, service_id: str) -> bool:
         """Internal implementation of start_service"""
         config = self.service_configs[service_id]
         
+        # Check if service is already running
         if service_id in self.processes and self.processes[service_id].poll() is None:
             logger.info(f"Service {service_id} is already running")
             return True
+        
+        # Check if port is already in use - this detects services started outside of the manager
+        if "port" in config:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex(('localhost', config["port"]))
+                sock.close()
+                if result == 0:  # Port is in use
+                    logger.info(f"Service {service_id} is already running on port {config['port']}")
+                    # Try to find the actual process using the port
+                    try:
+                        import psutil
+                        for conn in psutil.net_connections():
+                            if conn.laddr.port == config["port"] and conn.status == 'LISTEN':
+                                if conn.pid:
+                                    # Create a process entry with the actual PID
+                                    self.processes[service_id] = type('MockProcess', (), {
+                                        'poll': lambda self=None: None,
+                                        'pid': conn.pid,
+                                        'terminate': lambda self=None: None,
+                                        'kill': lambda self=None: None
+                                    })()
+                                    self.service_pids[service_id] = conn.pid
+                                    logger.info(f"Found existing process for {service_id} with PID: {conn.pid}")
+                                    return True
+                    except Exception as e:
+                        logger.debug(f"Could not find process for port {config['port']}: {e}")
+                    
+                    # Fallback to dummy process if we can't find the actual PID
+                    self.processes[service_id] = type('MockProcess', (), {
+                        'poll': lambda self=None: None,
+                        'pid': -1,
+                        'terminate': lambda self=None: None,
+                        'kill': lambda self=None: None
+                    })()
+                    self.service_pids[service_id] = -1
+                    return True
+            except Exception:
+                pass
         
         try:
             logger.info(f"Starting {config['name']}...")
@@ -548,70 +612,131 @@ class MediVoteBackgroundManager:
                 self.stopped_services.remove(service_id)
             
             # Prepare command
-            cmd = [sys.executable, config["script"]]
+            cmd = config["command"].copy()
             
             # Add config file if specified
             if "config_file" in config:
                 cmd.extend(["--config", config["config_file"]])
-
-            # Set working directory for backend and frontend
-            cwd = None
-            script_path = config["script"]
-            if service_id == "backend":
-                cwd = "backend"
-                script_path = "main.py"
-            elif service_id == "frontend":
-                cwd = "frontend"
-                script_path = "serve.py"
-
-            # Open log file for both stdout and stderr
-            log_file = open(config["log_file"], "a")
-
-            # Start process in background, redirecting stdout and stderr
-            process = subprocess.Popen(
-                [sys.executable, script_path] + (cmd[2:] if len(cmd) > 2 else []),
-                cwd=cwd,
-                stdout=log_file,
-                stderr=log_file
-            )
-            self.processes[service_id] = process
-            self.service_pids[service_id] = process.pid  # Track the PID
-            self.services[service_id] = {
-                "name": config["name"],
-                "port": config["port"],
-                "dashboard_port": config.get("dashboard_port", "N/A"),
-                "status": "running",
-                "pid": process.pid,
-                "start_time": datetime.utcnow()
-            }
             
-            # Start monitoring thread
-            threading.Thread(target=self._monitor_service, args=(service_id,), daemon=True).start()
+            # Create log directory if it doesn't exist
+            log_file = config.get("log_file", f"logs/{service_id}.log")
+            log_dir = os.path.dirname(log_file)
+            if log_dir and not os.path.exists(log_dir):
+                os.makedirs(log_dir, exist_ok=True)
+                logger.debug(f"Created log directory: {log_dir}")
             
-            # Record successful start
-            self._record_service_success(service_id)
+            # Create logs directory if it doesn't exist
+            if not os.path.exists("logs"):
+                os.makedirs("logs", exist_ok=True)
+                logger.debug("Created logs directory")
             
-            logger.info(f"Started {config['name']} (PID: {process.pid}) on port {config['port']}")
-            return True
+            # Ensure log file exists (create empty file if it doesn't exist)
+            if log_file and not os.path.exists(log_file):
+                try:
+                    with open(log_file, 'a') as f:
+                        f.write(f"# Log file created for {service_id} at {datetime.now()}\n")
+                    logger.debug(f"Created log file: {log_file}")
+                except Exception as e:
+                    logger.warning(f"Could not create log file {log_file}: {e}")
             
+            # Start the process with proper log file redirection
+            try:
+                # Open log file for writing
+                log_file = config.get("log_file", f"logs/{service_id}.log")
+                log_handle = open(log_file, 'a', encoding='utf-8')
+                
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=log_handle,
+                    stderr=log_handle,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True
+                )
+                
+                # Store log handle for cleanup later
+                if not hasattr(self, 'log_handles'):
+                    self.log_handles = {}
+                self.log_handles[service_id] = log_handle
+                
+                # Wait a moment to see if it starts successfully
+                await asyncio.sleep(2)
+                
+                if process.poll() is None:  # Process is still running
+                    self.processes[service_id] = process
+                    self.service_pids[service_id] = process.pid
+                    
+                    # Update health tracking
+                    if service_id in self.service_health:
+                        self.service_health[service_id].update({
+                            'start_time': time.time(),
+                            'status': 'running',
+                            'last_check': time.time()
+                        })
+                    
+                    logger.info(f"Started {config['name']} (PID: {process.pid}) on port {config.get('port', 'N/A')}")
+                    return True
+                else:
+                    # Process failed to start
+                    stdout, stderr = process.communicate()
+                    logger.error(f"Process for {service_id} failed to start")
+                    if stdout:
+                        logger.debug(f"STDOUT: {stdout}")
+                    if stderr:
+                        logger.debug(f"STDERR: {stderr}")
+                    return False
+                    
+            except FileNotFoundError:
+                logger.error(f"Command not found: {cmd[0]}")
+                return False
+            except Exception as e:
+                logger.error(f"Failed to start {config['name']}: {e}")
+                return False
+        
         except Exception as e:
-            logger.error(f"Failed to start {config['name']}: {e}")
-            self._record_service_failure(service_id, str(e))
+            logger.error(f"Error starting {service_id}: {e}")
             return False
     
     async def start_dashboard_servers(self):
-        """Start dashboard servers for each service"""
+        """Start individual dashboard servers for each service"""
         logger.info("Starting dashboard servers...")
         
         for service_id, config in self.service_configs.items():
-            # Skip network dashboard as it doesn't need its own dashboard
-            if service_id == "network_dashboard":
+            if "dashboard_port" in config:
+                try:
+                    await self.start_service_dashboard(service_id)
+                except Exception as e:
+                    logger.error(f"Failed to start {config['name']} dashboard: {e}")
+        
+        logger.info("Dashboard servers started")
+    
+    def _find_available_port(self, start_port: int, max_attempts: int = 10) -> int:
+        """Find an available port starting from start_port"""
+        for i in range(max_attempts):
+            port = start_port + i
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex(('localhost', port))
+                sock.close()
+                if result != 0:  # Port is available
+                    return port
+            except Exception:
                 continue
-            # Only access dashboard_port if it exists
-            dashboard_port = config.get("dashboard_port")
-            if dashboard_port is not None:
-                await self.start_service_dashboard(service_id)
-                await asyncio.sleep(1)  # Small delay between dashboard starts
+        # If no port found, try a random port in a higher range
+        for _ in range(5):
+            port = random.randint(9000, 9999)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex(('localhost', port))
+                sock.close()
+                if result != 0:  # Port is available
+                    logger.warning(f"Using random port {port} instead of {start_port}")
+                    return port
+            except Exception:
+                continue
+        return start_port  # Fallback to original port
     
     async def start_service_dashboard(self, service_id: str):
         """Start a dashboard server for a specific service"""
@@ -621,38 +746,128 @@ class MediVoteBackgroundManager:
         if "dashboard_port" not in config:
             return
             
-        dashboard_port = config["dashboard_port"]
+        original_port = config["dashboard_port"]
+        dashboard_port = self._find_available_port(original_port)
+        
+        if dashboard_port != original_port:
+            logger.info(f"Port {original_port} in use, using {dashboard_port} for {config['name']} dashboard")
         
         try:
             # Create dashboard HTML
             dashboard_html = self._create_service_dashboard(service_id, config)
             
             # Start dashboard server
-            import http.server
-            import socketserver
-            
             class ServiceDashboardHandler(http.server.SimpleHTTPRequestHandler):
+                def finish(self):
+                    """Override finish to prevent errors on connection aborts"""
+                    try:
+                        super().finish()
+                    except (ValueError, OSError, ConnectionAbortedError):
+                        # Ignore errors when connection is already closed or aborted
+                        pass
+                
+                def handle_one_request(self):
+                    """Override handle_one_request to prevent connection errors"""
+                    try:
+                        super().handle_one_request()
+                    except (ValueError, OSError, ConnectionAbortedError) as e:
+                        # Ignore errors when connection is already closed or aborted
+                        pass
+                
+                def do_HEAD(self):
+                    """Handle HEAD requests - simplified and robust implementation"""
+                    try:
+                        if self.path == '/' or self.path == '':
+                            # Fast HEAD response without calculating content length
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'text/html; charset=utf-8')
+                            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                            self.send_header('Connection', 'close')
+                            self.end_headers()
+                            # No body for HEAD requests
+                        elif self.path == '/favicon.ico':
+                            self.send_response(204)
+                            self.send_header('Connection', 'close')
+                            self.end_headers()
+                        else:
+                            self.send_response(404)
+                            self.send_header('Connection', 'close')
+                            self.end_headers()
+                    except Exception as e:
+                        # More comprehensive error handling
+                        try:
+                            self.send_response(500)
+                            self.send_header('Connection', 'close')
+                            self.end_headers()
+                        except:
+                            pass  # If we can't even send error response, just give up
+
                 def do_GET(self):
-                    if self.path == '/':
-                        self.send_response(200)
-                        self.send_header('Content-type', 'text/html')
-                        self.end_headers()
-                        self.wfile.write(dashboard_html.encode('utf-8'))
-                    else:
-                        super().do_GET()
+                    try:
+                        if self.path == '/' or self.path == '':
+                            # Pre-encode the HTML for faster response
+                            html_bytes = dashboard_html.encode('utf-8')
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'text/html; charset=utf-8')
+                            self.send_header('Content-Length', str(len(html_bytes)))
+                            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                            self.send_header('Connection', 'close')  # Close connection after response
+                            self.end_headers()
+                            self.wfile.write(html_bytes)
+                            self.wfile.flush()  # Ensure immediate send
+                        elif self.path == '/favicon.ico':
+                            # Return empty favicon to prevent 404
+                            self.send_response(204)
+                            self.send_header('Content-Length', '0')
+                            self.send_header('Connection', 'close')
+                            self.end_headers()
+                        else:
+                            # For any other path, return a simple 404
+                            self.send_response(404)
+                            self.send_header('Content-Type', 'text/html')
+                            self.send_header('Content-Length', '9')
+                            self.send_header('Connection', 'close')
+                            self.end_headers()
+                            self.wfile.write(b'Not Found')
+                    except (ConnectionAbortedError, BrokenPipeError, OSError):
+                        # Connection was aborted by client - this is normal
+                        pass
             
-            # Start dashboard server in background
+            # Start dashboard server in background with optimizations
             dashboard_server = socketserver.TCPServer(("", dashboard_port), ServiceDashboardHandler)
+            dashboard_server.timeout = 5  # Shorter timeout to prevent hanging
+            dashboard_server.allow_reuse_address = True  # Allow quick restart
+            dashboard_server.request_queue_size = 1  # Minimal queue to prevent backlog
             logger.info(f"Started {config['name']} dashboard on port {dashboard_port}")
             
-            # Run server in background
-            threading.Thread(target=dashboard_server.serve_forever, daemon=True).start()
+            # Run server in background to allow health monitoring to run
+            logger.info("Starting HTTP server in background...")
+            def run_server():
+                try:
+                    dashboard_server.serve_forever()
+                except KeyboardInterrupt:
+                    logger.info("HTTP server stopped by user")
+                except Exception as e:
+                    logger.error(f"HTTP server error: {e}")
+                finally:
+                    try:
+                        dashboard_server.shutdown()
+                        dashboard_server.server_close()
+                    except Exception as e:
+                        logger.error(f"Error shutting down HTTP server: {e}")
             
+            # Start server in background thread
+            server_thread = threading.Thread(target=run_server, daemon=True)
+            server_thread.start()
+            
+            # Give server a moment to start
+            await asyncio.sleep(1)
+                
         except Exception as e:
             logger.error(f"Failed to start {config['name']} dashboard: {e}")
     
     def _create_service_dashboard(self, service_id: str, config: dict) -> str:
-        """Create HTML dashboard for a specific service"""
+        """Create full-featured HTML dashboard for a specific service"""
         service_name = config["name"]
         service_port = config["port"]
         dashboard_port = config.get("dashboard_port", "N/A")
@@ -674,8 +889,12 @@ class MediVoteBackgroundManager:
         button {{ padding: 8px 16px; margin: 2px; border: none; border-radius: 4px; cursor: pointer; }}
         button.primary {{ background: #007bff; color: white; }}
         button.danger {{ background: #dc3545; color: white; }}
+        button.auto-recovery-btn {{ background: #6c757d; color: white; }}
+        button.auto-recovery-btn.enabled {{ background: #28a745; }}
+        button.auto-recovery-btn.disabled {{ background: #6c757d; }}
         .info-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }}
         .info-card {{ background: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #007bff; }}
+        .warning {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
     </style>
 </head>
 <body>
@@ -739,118 +958,220 @@ class MediVoteBackgroundManager:
         """
     
     def _monitor_service(self, service_id: str):
-        """Monitor a service for health and restart if needed"""
-        config = self.service_configs[service_id]
-        
-        while service_id in self.processes and self.processes[service_id].poll() is None:
+        """Monitor a specific service for crashes and restart if needed"""
+        while self.is_running:
             try:
-                # Check if process is still alive
-                if self.processes[service_id].poll() is not None:
-                    logger.warning(f"Service {service_id} has stopped unexpectedly")
-                    
-                    # Auto-restart if enabled
-                    if config["auto_restart"]:
-                        logger.info(f"Restarting {config['name']}...")
-                        asyncio.run(self.start_service(service_id))
-                    break
-                
-                time.sleep(10)  # Check every 10 seconds
-                
+                if service_id in self.processes:
+                    process = self.processes[service_id]
+                    if process.poll() is not None:  # Process has terminated
+                        logger.warning(f"Service {service_id} has crashed, attempting restart...")
+                        asyncio.run(self._auto_recover_service(service_id))
+                time.sleep(5)  # Check every 5 seconds
             except Exception as e:
                 logger.error(f"Error monitoring {service_id}: {e}")
-                time.sleep(10)
+                time.sleep(5)
     
     async def stop_service(self, service_id: str, force: bool = False) -> bool:
-        """Stop a specific service gracefully"""
+        """Stop a specific service gracefully with shutdown throttling"""
         if service_id not in self.service_configs:
             logger.error(f"Unknown service: {service_id}")
             return False
         
+        # Implement shutdown throttling to prevent HTTP timeout issues
+        current_time = time.time()
+        if service_id in self.last_shutdown_time:
+            time_since_last_shutdown = current_time - self.last_shutdown_time[service_id]
+            # Use different throttling delays based on shutdown mode
+            throttle_delay = self.shutdown_throttle_delay if self.bulk_shutdown_mode else 1.0
+            if time_since_last_shutdown < throttle_delay:
+                throttle_wait = throttle_delay - time_since_last_shutdown
+                mode_desc = "bulk shutdown" if self.bulk_shutdown_mode else "individual shutdown"
+                logger.info(f"Throttling {mode_desc} request for {service_id}, waiting {throttle_wait:.1f}s to prevent HTTP timeout")
+                await asyncio.sleep(throttle_wait)
+        
+        # Record this shutdown attempt
+        self.last_shutdown_time[service_id] = time.time()
+        
         # Use concurrent operation handler to prevent race conditions
-        return self._handle_concurrent_operation(service_id, "stop", self._stop_service_impl, service_id, force)
+        result = self._handle_concurrent_operation(service_id, "stop", self._stop_service_impl, service_id, force)
+        
+        if result is False:
+            return False
+        
+        # Result is a tuple of (function, args, kwargs)
+        if isinstance(result, tuple) and len(result) == 3:
+            func, args, kwargs = result
+            try:
+                # Execute the async function
+                stop_result = await func(*args, **kwargs)
+                return stop_result
+            finally:
+                # Clear active operation after completion
+                if service_id in self.active_operations:
+                    del self.active_operations[service_id]
+        
+        return False
     
     async def _stop_service_impl(self, service_id: str, force: bool = False) -> bool:
-        """Internal implementation of stop_service with enhanced graceful shutdown"""
-        config = self.service_configs[service_id]
+        """Internal implementation of stop_service"""
+        if service_id not in self.service_configs:
+            logger.error(f"Unknown service: {service_id}")
+            return False
         
+        config = self.service_configs[service_id]
+        logger.info(f"Stopping {config['name']}...")
+        
+        # Temporarily disable auto-recovery for this service to prevent restart
+        original_auto_recovery = self.auto_recovery_enabled.get(service_id, False)
+        self.auto_recovery_enabled[service_id] = False
+        logger.info(f"Temporarily disabled auto-recovery for {service_id}")
+        
+        # Check if service is running
         if service_id not in self.processes:
-            logger.info(f"Service {service_id} is not running")
+            logger.warning(f"Service {service_id} is not running")
+            # Restore auto-recovery setting
+            self.auto_recovery_enabled[service_id] = original_auto_recovery
+            return True  # Consider it already stopped
+        
+        process = self.processes[service_id]
+        
+        # Check if it's a mock process (PID -1 or no real process methods)
+        is_mock_process = (hasattr(process, 'pid') and process.pid == -1) or not hasattr(process, 'poll')
+        
+        if is_mock_process:
+            # For mock processes, just remove from tracking
+            logger.info(f"Stopping mock process for {config['name']}")
+            if service_id in self.processes:
+                del self.processes[service_id]
+            if service_id in self.service_pids:
+                del self.service_pids[service_id]
+            logger.info(f"Mock process for {config['name']} stopped")
+            # Note: We don't restore auto-recovery here as service is stopped
             return True
         
+        # Try graceful shutdown first
+        if not force:
+            graceful_success = await self._try_graceful_shutdown(service_id, config, process)
+            if graceful_success:
+                logger.info(f"{config['name']} stopped gracefully")
+                # Cleanup
+                await self._cleanup_service_resources(service_id, process.pid if hasattr(process, 'pid') else None)
+                # Note: We don't restore auto-recovery here as service is stopped
+                return True
+        
+        # Force stop if graceful failed or force=True
         try:
-            logger.info(f"Stopping {config['name']}...")
-            
-            # Show credibility warning
-            if service_id in self.credibility_warnings:
-                logger.warning(self.credibility_warnings[service_id])
-            
-            process = self.processes[service_id]
-            
-            # Step 1: Try graceful shutdown via HTTP endpoint
-            if not force and config["port"] > 0:
-                graceful_shutdown_success = await self._try_graceful_shutdown(service_id, config, process)
-                if graceful_shutdown_success:
-                    logger.info(f"{config['name']} stopped gracefully via HTTP shutdown")
-                    await self._cleanup_service_resources(service_id, process.pid)
-                    return True
-            
-            # Step 2: Send SIGTERM (graceful termination signal)
-            if process.poll() is None:
+            if hasattr(process, 'terminate'):
+                process.terminate()
                 logger.info(f"Sending SIGTERM to {config['name']} (PID: {process.pid})")
                 
-                if os.name == 'nt':
-                    process.terminate()
-                else:
-                    process.send_signal(signal.SIGTERM)
-                
-                # Wait for graceful termination
-                graceful_termination = await self._wait_for_termination(process, config['name'], timeout=15)
-                if graceful_termination:
+                # Wait for termination
+                termination_success = await self._wait_for_termination(process, config['name'], timeout=5)
+                if termination_success:
                     logger.info(f"{config['name']} stopped gracefully via SIGTERM")
-                    await self._cleanup_service_resources(service_id, process.pid)
-                    return True
-            
-            # Step 3: Force kill if still running
-            if process.poll() is None:
-                logger.warning(f"Force killing {config['name']} (PID: {process.pid})")
-                process.kill()
-                
-                # Wait for force termination
-                force_termination = await self._wait_for_termination(process, config['name'], timeout=5)
-                if force_termination:
-                    logger.info(f"{config['name']} stopped via force kill")
-                    await self._cleanup_service_resources(service_id, process.pid)
-                    return True
                 else:
-                    logger.error(f"Failed to force kill {config['name']}")
-                    return False
-            
-            # Cleanup if process was already terminated
-            await self._cleanup_service_resources(service_id, process.pid)
-            logger.info(f"Stopped {config['name']}")
-            return True
-            
+                    # Force kill if SIGTERM didn't work
+                    if hasattr(process, 'kill'):
+                        process.kill()
+                        logger.info(f"Force killed {config['name']} (PID: {process.pid})")
+                    else:
+                        logger.warning(f"Could not force kill {config['name']} - no kill method")
+            else:
+                logger.warning(f"Could not terminate {config['name']} - no terminate method")
         except Exception as e:
-            logger.error(f"Failed to stop {config['name']}: {e}")
-            return False
+            logger.error(f"Error stopping {config['name']}: {e}")
+        
+        # Cleanup
+        try:
+            await self._cleanup_service_resources(service_id, process.pid if hasattr(process, 'pid') else None)
+        except Exception as e:
+            logger.error(f"Error during cleanup of {service_id}: {e}")
+        
+        # Remove from tracking
+        if service_id in self.processes:
+            del self.processes[service_id]
+        if service_id in self.service_pids:
+            del self.service_pids[service_id]
+        
+        # Close log handle if it exists
+        if hasattr(self, 'log_handles') and service_id in self.log_handles:
+            try:
+                self.log_handles[service_id].close()
+                del self.log_handles[service_id]
+                logger.debug(f"Closed log handle for {service_id}")
+            except Exception as e:
+                logger.warning(f"Error closing log handle for {service_id}: {e}")
+        
+        logger.info(f"Stopped {config['name']}")
+        # Note: We don't restore auto-recovery here as service is successfully stopped
+        return True
     
     async def _try_graceful_shutdown(self, service_id: str, config: dict, process) -> bool:
-        """Try graceful shutdown via HTTP endpoint"""
-        try:
-            import requests
-            response = requests.post(f"http://localhost:{config['port']}/shutdown", timeout=5)
-            if response.status_code == 200:
-                logger.info(f"Graceful shutdown signal sent to {config['name']}")
-                # Wait for graceful shutdown with timeout
-                return await self._wait_for_termination(process, config['name'], timeout=10)
-            else:
-                logger.warning(f"Shutdown request failed for {config['name']}: {response.status_code}")
+        """Try graceful shutdown via HTTP endpoint - TIERED APPROACH"""
+        
+        # 🏗️ TIER 1: Critical Services (HTTP + SIGTERM Fallback)
+        # These services have proper /shutdown endpoints and handle state/data
+        tier1_critical_services = ['backend', 'blockchain_node', 'incentive_system', 'network_coordinator']
+        
+        # 🔧 TIER 2: Simple Services (SIGTERM Only)
+        # These services are stateless or simple file servers
+        tier2_simple_services = ['network_dashboard', 'frontend']
+        
+        if service_id in tier1_critical_services:
+            logger.info(f"TIER 1: Attempting HTTP graceful shutdown for {config['name']}")
+            try:
+                import requests
+                # Use appropriate timeout for the shutdown request
+                shutdown_wait_timeout = 8 if service_id == 'backend' else 5
+                # Use longer HTTP request timeout for services that need to save state
+                # Increased timeout for queued shutdowns to prevent timeout issues
+                http_request_timeout = 15 if service_id in ['blockchain_node', 'backend'] else 10
+                
+                # Create session with retry logic for better reliability during queued shutdowns
+                session = requests.Session()
+                
+                # Configure session for reliability
+                from requests.adapters import HTTPAdapter
+                from urllib3.util.retry import Retry
+                
+                retry_strategy = Retry(
+                    total=2,  # 2 retries
+                    backoff_factor=1,  # Wait 1, 2 seconds between retries
+                    status_forcelist=[429, 500, 502, 503, 504],  # Retry on these status codes
+                )
+                adapter = HTTPAdapter(max_retries=retry_strategy)
+                session.mount("http://", adapter)
+                
+                logger.info(f"Sending HTTP shutdown request to {config['name']} on port {config['port']}")
+                response = session.post(f"http://localhost:{config['port']}/shutdown", timeout=http_request_timeout)
+                
+                if response.status_code == 200:
+                    logger.info(f"SUCCESS: HTTP graceful shutdown signal sent to {config['name']}")
+                    # Wait for graceful shutdown with service-specific timeout
+                    return await self._wait_for_termination(process, config['name'], timeout=shutdown_wait_timeout)
+                else:
+                    logger.warning(f"HTTP shutdown returned {response.status_code} for {config['name']}, will fallback to SIGTERM")
+                    return False
+                    
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"HTTP shutdown timeout for {config['name']} after {http_request_timeout}s: {e}, will fallback to SIGTERM")
                 return False
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"Could not send graceful shutdown to {config['name']}: {e}")
+            except requests.exceptions.ConnectionError as e:
+                logger.warning(f"HTTP shutdown connection error for {config['name']}: {e}, will fallback to SIGTERM")
+                return False
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"HTTP shutdown not available for {config['name']}: {e}, will fallback to SIGTERM")
+                return False
+            except Exception as e:
+                logger.warning(f"HTTP shutdown error for {config['name']}: {e}, will fallback to SIGTERM")
+                return False
+                
+        elif service_id in tier2_simple_services:
+            logger.info(f"TIER 2: Skipping HTTP shutdown for {config['name']} - using SIGTERM directly")
             return False
-        except Exception as e:
-            logger.warning(f"Unexpected error during graceful shutdown for {config['name']}: {e}")
+            
+        else:
+            logger.warning(f"UNKNOWN TIER: Service {service_id} not categorized, skipping HTTP shutdown")
             return False
     
     async def _wait_for_termination(self, process, service_name: str, timeout: int = 10) -> bool:
@@ -959,8 +1280,10 @@ class MediVoteBackgroundManager:
             temp_patterns = ["*.tmp", "*.temp", "*.cache"]
             config = self.service_configs[service_id]
             
-            if "script" in config:
-                script_dir = os.path.dirname(config["script"])
+            if "command" in config:
+                # Get the directory of the first command element (usually the script)
+                script_path = config["command"][1] if len(config["command"]) > 1 else config["command"][0]
+                script_dir = os.path.dirname(script_path)
                 if os.path.exists(script_dir):
                     for pattern in temp_patterns:
                         import glob
@@ -976,19 +1299,27 @@ class MediVoteBackgroundManager:
     
     async def stop_all_services(self):
         """Stop all services gracefully with comprehensive cleanup"""
-        logger.info("🛑 Starting graceful shutdown of all services...")
+        logger.info("STOP: Starting graceful shutdown of all services...")
         
-        # Step 1: Stop management dashboard server gracefully
+        # Step 0: Enable bulk shutdown mode for better HTTP timeout handling
+        self.bulk_shutdown_mode = True
+        logger.info("Enabled bulk shutdown mode with enhanced throttling")
+        
+        # Step 1: Disable auto-recovery for all services to prevent restart
+        logger.info("Disabling auto-recovery for all services...")
+        for service_id in self.service_configs:
+            self.auto_recovery_enabled[service_id] = False
+        
+        # Step 2: Stop management dashboard server gracefully
         await self._stop_management_dashboard()
         
-        # Step 2: Stop services in reverse dependency order with enhanced cleanup
+        # Step 3: Stop services in reverse dependency order with enhanced cleanup
         stop_order = [
             "frontend",
             "network_dashboard", 
             "network_coordinator",
             "incentive_system",
-            "blockchain_node_2",
-            "blockchain_node_1",
+            "blockchain_node",
             "backend"
         ]
         
@@ -997,35 +1328,57 @@ class MediVoteBackgroundManager:
         
         for service_id in stop_order:
             if service_id in self.service_configs:
-                logger.info(f"🔄 Stopping {service_id}...")
+                logger.info(f"Stopping {service_id}...")
                 try:
-                    success = await self.stop_service(service_id)
+                    # Use a timeout for each service stop to prevent hanging
+                    success = await asyncio.wait_for(
+                        self.stop_service(service_id), 
+                        timeout=15.0  # 15 second timeout per service
+                    )
                     if success:
                         successful_stops += 1
-                        logger.info(f"✅ {service_id} stopped successfully")
+                        logger.info(f"{service_id} stopped successfully")
                     else:
-                        logger.warning(f"⚠️ {service_id} failed to stop gracefully")
+                        logger.warning(f"{service_id} failed to stop gracefully")
+                except asyncio.TimeoutError:
+                    logger.error(f"Timeout stopping {service_id} after 15 seconds")
+                    # Try to force kill the process if we have a PID
+                    if service_id in self.service_pids:
+                        try:
+                            import psutil
+                            pid = self.service_pids[service_id]
+                            if pid > 0:
+                                proc = psutil.Process(pid)
+                                proc.kill()
+                                logger.warning(f"Force killed {service_id} (PID: {pid}) due to timeout")
+                        except Exception as kill_error:
+                            logger.error(f"Could not force kill {service_id}: {kill_error}")
                 except Exception as e:
-                    logger.error(f"❌ Error stopping {service_id}: {e}")
+                    logger.error(f"Error stopping {service_id}: {e}")
                 
-                # Small delay between stops to prevent overwhelming the system
-                await asyncio.sleep(0.5)
+                # Enhanced delay between stops to prevent HTTP shutdown timeout issues
+                # Give more time between services when doing bulk shutdown
+                await asyncio.sleep(2.0)  # Increased from 0.5s to 2.0s for HTTP requests to complete
         
-        # Step 3: Final cleanup
+        # Step 4: Final cleanup
         await self._final_cleanup()
         
-        logger.info(f"🎯 Shutdown complete: {successful_stops}/{total_services} services stopped successfully")
+        # Step 5: Disable bulk shutdown mode
+        self.bulk_shutdown_mode = False
+        logger.info("Bulk shutdown completed, disabled bulk shutdown mode")
+        
+        logger.info(f"Shutdown complete: {successful_stops}/{total_services} services stopped successfully")
         
         if successful_stops == total_services:
-            logger.info("✅ All services stopped gracefully")
+            logger.info("All services stopped gracefully")
         else:
-            logger.warning(f"⚠️ {total_services - successful_stops} services may not have stopped cleanly")
+            logger.warning(f"{total_services - successful_stops} services may not have stopped cleanly")
     
     async def _stop_management_dashboard(self):
         """Stop management dashboard server gracefully"""
         if hasattr(self, 'management_server'):
             try:
-                logger.info("🖥️ Stopping management dashboard server...")
+                logger.info("Stopping management dashboard server...")
                 
                 # Shutdown the server gracefully
                 self.management_server.shutdown()
@@ -1033,17 +1386,17 @@ class MediVoteBackgroundManager:
                 
                 # Wait a moment for connections to close
                 await asyncio.sleep(1)
-                
-                logger.info("✅ Management dashboard server stopped")
+        
+                logger.info("Management dashboard server stopped")
             except Exception as e:
-                logger.error(f"❌ Failed to stop management dashboard server: {e}")
+                logger.error(f"Failed to stop management dashboard server: {e}")
         else:
-            logger.info("ℹ️ No management dashboard server to stop")
+            logger.info("No management dashboard server to stop")
     
     async def _final_cleanup(self):
         """Perform final cleanup after all services are stopped"""
         try:
-            logger.info("🧹 Performing final cleanup...")
+            logger.info("Performing final cleanup...")
             
             # Clean up any remaining process resources
             await self._cleanup_remaining_processes()
@@ -1054,10 +1407,10 @@ class MediVoteBackgroundManager:
             # Clean up temporary files and directories
             await self._cleanup_temp_directories()
             
-            logger.info("✅ Final cleanup completed")
+            logger.info("Final cleanup completed")
             
         except Exception as e:
-            logger.error(f"❌ Error during final cleanup: {e}")
+            logger.error(f"Error during final cleanup: {e}")
     
     async def _cleanup_remaining_processes(self):
         """Clean up any remaining processes that might not have been properly stopped"""
@@ -1071,7 +1424,7 @@ class MediVoteBackgroundManager:
                     if cmdline and any('medivote' in arg.lower() or 'python' in arg.lower() for arg in cmdline):
                         # Check if it's one of our managed processes
                         if proc.pid not in [p.pid for p in self.processes.values() if p.poll() is None]:
-                            logger.warning(f"🧹 Cleaning up orphaned process: {proc.pid}")
+                            logger.warning(f"Cleaning up orphaned process: {proc.pid}")
                             proc.terminate()
                             try:
                                 proc.wait(timeout=5)
@@ -1105,7 +1458,7 @@ class MediVoteBackgroundManager:
             # Clear service PIDs
             self.service_pids.clear()
             
-            logger.debug("🧹 Cleared global resource caches")
+            logger.debug("CLEANUP: Cleared global resource caches")
             
         except Exception as e:
             logger.error(f"Error cleaning up global resources: {e}")
@@ -1127,7 +1480,7 @@ class MediVoteBackgroundManager:
                         for temp_file in temp_files:
                             if os.path.isfile(temp_file):
                                 os.remove(temp_file)
-                                logger.debug(f"🧹 Cleaned up temp file: {temp_file}")
+                                logger.debug(f"CLEANUP: Cleaned up temp file: {temp_file}")
                     except Exception as e:
                         logger.debug(f"Could not clean up {temp_dir}: {e}")
             
@@ -1140,7 +1493,7 @@ class MediVoteBackgroundManager:
                         if os.path.exists(backup_file):
                             os.remove(backup_file)
                         os.rename(log_file, backup_file)
-                        logger.info(f"📦 Archived large log file: {log_file}")
+                        logger.info(f"ARCHIVE: Archived large log file: {log_file}")
                 except Exception as e:
                     logger.debug(f"Could not archive log file {log_file}: {e}")
                     
@@ -1150,113 +1503,164 @@ class MediVoteBackgroundManager:
     async def restart_service(self, service_id: str) -> bool:
         """Restart a specific service"""
         # Use concurrent operation handler to prevent race conditions
-        return self._handle_concurrent_operation(service_id, "restart", self._restart_service_impl, service_id)
+        result = self._handle_concurrent_operation(service_id, "restart", self._restart_service_impl, service_id)
+        
+        if result is False:
+            return False
+        
+        # Result is a tuple of (function, args, kwargs)
+        if isinstance(result, tuple) and len(result) == 3:
+            func, args, kwargs = result
+            try:
+                # Execute the async function
+                restart_result = await func(*args, **kwargs)
+                return restart_result
+            finally:
+                # Clear active operation after completion
+                if service_id in self.active_operations:
+                    del self.active_operations[service_id]
+        
+        return False
     
     async def _restart_service_impl(self, service_id: str) -> bool:
-        """Internal implementation of restart_service"""
-        await self.stop_service(service_id)
-        await asyncio.sleep(2)
-        return await self.start_service(service_id)
+        """Internal implementation of restart_service with improved timing"""
+        try:
+            logger.info(f"Restarting {service_id}...")
+            
+            # Check if service is actually running first
+            is_running = False
+            if service_id in self.processes:
+                process = self.processes[service_id]
+                if process and process.poll() is None:
+                    is_running = True
+            
+            # Only stop if actually running
+            if is_running:
+                try:
+                    stop_success = await self._stop_service_impl(service_id)
+                    if not stop_success:
+                        logger.warning(f"Stop returned false for {service_id} during restart, but continuing...")
+                except Exception as e:
+                    logger.warning(f"Error stopping {service_id} during restart: {e}, but continuing...")
+                
+                # Minimal wait for cleanup
+                await asyncio.sleep(0.5)
+            else:
+                logger.info(f"Service {service_id} is not running, treating restart as start")
+            
+            # Start the service - call _start_service_impl directly to avoid concurrent operation conflict
+            start_success = await self._start_service_impl(service_id)
+            if start_success:
+                logger.info(f"Successfully restarted {service_id}")
+                return True
+            else:
+                logger.error(f"Failed to start {service_id} during restart")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error during restart of {service_id}: {e}")
+            return False
     
     def get_service_status(self) -> Dict[str, Any]:
         """Get status of all services"""
-        with self._lock:  # Thread safety for status updates
-            status = {}
-            for service_id, config in self.service_configs.items():
-                service_info = {
-                    "name": config["name"],
-                    "port": config["port"],
-                    "status": "stopped"  # Default to stopped
-                }
+        status = {}
+        
+        for service_id, config in self.service_configs.items():
+            service_info = {
+                "name": config["name"],
+                "port": config.get("port", "N/A"),
+                "status": "stopped",
+                "pid": None,
+                "cpu_percent": 0.0,
+                "memory_mb": 0.0,
+                "uptime": 0,
+                "auto_recovery_enabled": self.get_auto_recovery_status(service_id)
+            }
+            
+            # Check if process is running
+            process_running = False
+            current_pid = None
                 
-                # Add dashboard port if configured
-                if "dashboard_port" in config:
-                    service_info["dashboard_port"] = config["dashboard_port"]
-                else:
-                    service_info["dashboard_port"] = "N/A"
-                
-                # Check if service was explicitly stopped
-                if hasattr(self, 'stopped_services') and service_id in self.stopped_services:
-                    service_info["status"] = "stopped"
-                    status[service_id] = service_info
-                    continue
-                
-                # Check if process is running
-                process_running = False
-                current_pid = None
-                
-                if service_id in self.processes:
-                    process = self.processes[service_id]
-                    if process.poll() is None:
-                        process_running = True
-                        service_info["status"] = "running"
-                        current_pid = process.pid
-                        service_info["pid"] = current_pid
-                        # Update tracked PID
-                        self.service_pids[service_id] = current_pid
-                
-                # If process not running, check if port is accessible (for all services)
-                if not process_running:
-                    import socket
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.settimeout(0.5)
+            if service_id in self.processes:
+                process = self.processes[service_id]
+                if process.poll() is None:
+                    process_running = True
+                    service_info["status"] = "running"
+                    current_pid = process.pid
+                    service_info["pid"] = current_pid
+                    # Update tracked PID
+                    self.service_pids[service_id] = current_pid
+            
+            # If process not running, check if port is accessible (for all services)
+            if not process_running and "port" in config:
+                import socket
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(0.5)
+                try:
+                    s.connect(("localhost", config["port"]))
+                    service_info["status"] = "running"
+                    # Try to get PID and resource usage from port if we can
                     try:
-                        s.connect(("localhost", config["port"]))
-                        service_info["status"] = "running"
-                        # Try to get PID and resource usage from port if we can
-                        try:
-                            import psutil
-                            for conn in psutil.net_connections():
-                                if conn.laddr.port == config["port"] and conn.status == 'LISTEN':
-                                    current_pid = conn.pid
-                                    service_info["pid"] = current_pid
-                                    # Update tracked PID
-                                    self.service_pids[service_id] = current_pid
-                                    break
-                        except:
-                            pass
+                        import psutil
+                        for conn in psutil.net_connections():
+                            if conn.laddr.port == config["port"] and conn.status == 'LISTEN':
+                                current_pid = conn.pid
+                                service_info["pid"] = current_pid
+                                # Update tracked PID and create process entry
+                                self.service_pids[service_id] = current_pid
+                                # Create a mock process entry for tracking
+                                self.processes[service_id] = type('MockProcess', (), {
+                                    'poll': lambda self=None: None,
+                                    'pid': current_pid,
+                                    'terminate': lambda self=None: None,
+                                    'kill': lambda self=None: None
+                                })()
+                                break
                     except:
-                        service_info["status"] = "stopped"
-                    finally:
-                        s.close()
-                
-                # If we still don't have a PID but have a tracked one, try to use it
-                if not current_pid and service_id in self.service_pids:
-                    tracked_pid = self.service_pids[service_id]
-                    try:
-                        # Check if the tracked PID is still valid
-                        proc = psutil.Process(tracked_pid)
-                        if proc.is_running():
-                            current_pid = tracked_pid
-                            service_info["pid"] = current_pid
-                            service_info["status"] = "running"
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        # Clean up invalid tracked PID
-                        if service_id in self.service_pids:
-                            del self.service_pids[service_id]
-                
-                # Get CPU and Memory for the current PID if we have one
-                if current_pid and service_info["status"] == "running":
-                    try:
-                        cpu_percent, memory_mb = self._get_process_resources(current_pid)
-                        service_info["cpu_percent"] = cpu_percent
-                        service_info["memory_mb"] = memory_mb
-                    except Exception as e:
-                        logger.debug(f"Error getting resources for PID {current_pid}: {e}")
-                        service_info["cpu_percent"] = 0.0
-                        service_info["memory_mb"] = 0.0
-                else:
+                        pass
+                except:
+                    service_info["status"] = "stopped"
+                finally:
+                    s.close()
+            
+            # If we still don't have a PID but have a tracked one, try to use it
+            if not current_pid and service_id in self.service_pids:
+                tracked_pid = self.service_pids[service_id]
+                try:
+                    # Check if the tracked PID is still valid
+                    import psutil
+                    proc = psutil.Process(tracked_pid)
+                    if proc.is_running():
+                        current_pid = tracked_pid
+                        service_info["pid"] = current_pid
+                        service_info["status"] = "running"
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    # Clean up invalid tracked PID
+                    if service_id in self.service_pids:
+                        del self.service_pids[service_id]
+            
+            # Get CPU and Memory for the current PID if we have one
+            if current_pid and service_info["status"] == "running":
+                try:
+                    cpu_percent, memory_mb = self._get_process_resources(current_pid)
+                    service_info["cpu_percent"] = cpu_percent
+                    service_info["memory_mb"] = memory_mb
+                except Exception as e:
+                    logger.debug(f"Error getting resources for PID {current_pid}: {e}")
                     service_info["cpu_percent"] = 0.0
                     service_info["memory_mb"] = 0.0
-                
-                # Add health information
-                health_info = self.get_service_health_info(service_id)
-                if health_info:
-                    service_info["health"] = health_info
-                
-                status[service_id] = service_info
+            else:
+                service_info["cpu_percent"] = 0.0
+                service_info["memory_mb"] = 0.0
             
-            return status
+            # Add health information
+            health_info = self.get_service_health_info(service_id)
+            if health_info:
+                service_info["health"] = health_info
+            
+            status[service_id] = service_info
+        
+        return status
     
     async def open_management_dashboard(self):
         """Open the main management dashboard"""
@@ -1265,8 +1669,10 @@ class MediVoteBackgroundManager:
             dashboard_html = self._create_management_dashboard()
             
             # Start a simple HTTP server to serve the dashboard
-            import http.server
-            import socketserver
+            port = self._find_available_port(8090)
+            
+            if port != 8090:
+                logger.info(f"Port 8090 in use, using {port} for management dashboard")
             
             # Store manager reference at module level for access by handler
             handler_manager = self
@@ -1303,11 +1709,10 @@ class MediVoteBackgroundManager:
                         self.send_header('X-Content-Type-Options', 'nosniff')
                         self.send_header('X-Frame-Options', 'DENY')
                         self.send_header('X-XSS-Protection', '1; mode=block')
-                        # Remove CSP header that blocks eval - we're not using eval anyway
                         self.end_headers()
                         self.wfile.write(dashboard_html.encode())
                     elif self.path == '/status':
-                        # Return current service status as JSON
+                        # Return current service status as JSON - optimized for speed
                         import json
                         if self.manager:
                             status = self.manager.get_service_status()
@@ -1316,6 +1721,7 @@ class MediVoteBackgroundManager:
                         self.send_response(200)
                         self.send_header('Content-type', 'application/json')
                         self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Cache-Control', 'no-cache')
                         self.end_headers()
                         self.wfile.write(json.dumps(status).encode())
                     elif self.path == '/health':
@@ -1328,11 +1734,25 @@ class MediVoteBackgroundManager:
                         self.send_response(200)
                         self.send_header('Content-type', 'application/json')
                         self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Cache-Control', 'no-cache')
                         self.end_headers()
                         self.wfile.write(json.dumps(health_info).encode())
+                    elif self.path == '/auto-recovery':
+                        # Return auto-recovery status as JSON
+                        import json
+                        if self.manager:
+                            auto_recovery_status = self.manager.get_all_auto_recovery_status()
+                        else:
+                            auto_recovery_status = {}
+                        self.send_response(200)
+                        self.send_header('Content-type', 'application/json')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Cache-Control', 'no-cache')
+                        self.end_headers()
+                        self.wfile.write(json.dumps(auto_recovery_status).encode())
                     elif self.path == '/events':
                         import json  # Ensure json is imported in this scope
-                        # Server-Sent Events for real-time updates
+                        # Server-Sent Events for real-time updates - optimized
                         self.send_response(200)
                         self.send_header('Content-type', 'text/event-stream')
                         self.send_header('Cache-Control', 'no-cache')
@@ -1364,7 +1784,7 @@ class MediVoteBackgroundManager:
                             logger.debug(f"SSE initial data error: {e}")
                             return
                         
-                        # Then start the continuous stream
+                        # Then start the continuous stream with shorter intervals
                         try:
                             while True:
                                 # Check if connection is still valid before writing
@@ -1404,7 +1824,7 @@ class MediVoteBackgroundManager:
                                     except Exception as e:
                                         logger.debug(f"SSE write error: {e}")
                                         break
-                                time.sleep(1)  # Send updates every 1 second for better CPU/memory monitoring
+                                time.sleep(0.5)  # Send updates every 0.5 seconds for faster response
                         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, ValueError, OSError):
                             logger.debug("SSE connection closed by client")
                         except Exception as e:
@@ -1422,176 +1842,275 @@ class MediVoteBackgroundManager:
                         super().do_GET()
                 
                 def do_POST(self):
-                    import json
-                    logger.debug(f"do_POST called with path: {self.path}")
-                    if self.path.startswith('/restart/'):
-                        service_id = self.path.split('/')[-1]
-                        logger.info(f"Received POST /restart/ for {service_id}")
-                        try:
-                            if self.manager:
-                                # Use threading to avoid blocking the HTTP handler
-                                import threading
-                                import queue
-                                
-                                result_queue = queue.Queue()
-                                manager_ref = self.manager  # Capture manager reference for thread
-                                
-                                def restart_service_thread():
-                                    try:
-                                        import asyncio
-                                        loop = asyncio.new_event_loop()
-                                        asyncio.set_event_loop(loop)
-                                        success = loop.run_until_complete(manager_ref.restart_service(service_id))
-                                        loop.close()
-                                        result_queue.put(('success', success))
-                                    except Exception as e:
-                                        result_queue.put(('error', str(e)))
-                                
-                                # Start the restart operation in a separate thread
-                                thread = threading.Thread(target=restart_service_thread, daemon=True)
-                                thread.start()
-                                
-                                # Wait for result with timeout (10 seconds for restart)
+                    """Handle POST requests for service control - optimized for speed"""
+                    try:
+                        # Parse the URL path
+                        path = self.path.strip('/')
+                        
+                        if path.startswith('start/'):
+                            service_id = path[6:]  # Remove 'start/' prefix
+                            logger.info(f"Received POST /start/ for {service_id}")
+                            
+                            # Validate service ID first
+                            if not self.manager.is_valid_service(service_id):
+                                response_data = {
+                                    'success': False,
+                                    'error': f"Unknown service: {service_id}"
+                                }
+                                self.send_response(200)
+                                self.send_header('Content-Type', 'application/json')
+                                self.send_header('Cache-Control', 'no-cache')
+                                self.end_headers()
+                                self.wfile.write(json.dumps(response_data).encode())
+                                return
+                            
+                            def start_service_thread():
                                 try:
-                                    result_type, result_data = result_queue.get(timeout=10)
-                                    if result_type == 'success':
-                                        response = {'success': result_data, 'error': None if result_data else 'Failed to restart service'}
-                                    else:
-                                        response = {'success': False, 'error': result_data}
-                                except queue.Empty:
-                                    response = {'success': False, 'error': 'Operation timed out'}
-                            else:
-                                response = {'success': False, 'error': 'Manager not available'}
-                        except Exception as e:
-                            response = {'success': False, 'error': str(e)}
-                        
-                        self.send_response(200)
-                        self.send_header('Content-type', 'application/json')
-                        self.send_header('Access-Control-Allow-Origin', '*')
-                        self.end_headers()
-                        try:
-                            self.wfile.write(json.dumps(response).encode())
-                        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                            logger.debug(f"Client disconnected during /restart/{service_id} response")
-                        
-                    elif self.path.startswith('/stop/'):
-                        service_id = self.path.split('/')[-1]
-                        logger.info(f"Received POST /stop/ for {service_id}")
-                        try:
-                            if self.manager:
-                                # Use threading to avoid blocking the HTTP handler
-                                import threading
-                                import queue
-                                
-                                result_queue = queue.Queue()
-                                manager_ref = self.manager  # Capture manager reference for thread
-                                
-                                def stop_service_thread():
-                                    logger.debug(f"stop_service_thread started for {service_id}")
-                                    try:
-                                        import asyncio
-                                        loop = asyncio.new_event_loop()
-                                        asyncio.set_event_loop(loop)
-                                        success = loop.run_until_complete(manager_ref.stop_service(service_id))
-                                        logger.debug(f"stop_service returned: {success}")
-                                        loop.close()
-                                        result_queue.put(('success', success))
-                                    except Exception as e:
-                                        logger.error(f"Error in stop_service_thread: {e}")
-                                        result_queue.put(('error', str(e)))
-                                
-                                # Start the stop operation in a separate thread
-                                thread = threading.Thread(target=stop_service_thread, daemon=True)
-                                thread.start()
-                                logger.info(f"Started thread for stopping {service_id}")
-                                
-                                # Wait for result with timeout (10 seconds for stop operations)
+                                    # Create a new event loop for this thread
+                                    loop = asyncio.new_event_loop()
+                                    asyncio.set_event_loop(loop)
+                                    result = loop.run_until_complete(self.manager.start_service(service_id))
+                                    self.manager.result_queue.put(('start', service_id, result))
+                                except Exception as e:
+                                    logger.error(f"Error starting {service_id}: {e}")
+                                    self.manager.result_queue.put(('start', service_id, False))
+                                finally:
+                                    loop.close()
+                            
+                            # Start operation in background thread
+                            thread = threading.Thread(target=start_service_thread)
+                            thread.daemon = True
+                            thread.start()
+                            
+                            # Wait for result with shorter timeout
+                            logger.info("Waiting for result from queue...")
+                            try:
+                                operation, service, result = self.manager.result_queue.get(timeout=15)
+                                logger.info(f"Got result from queue: {operation}, {result}")
+                            except queue.Empty:
+                                logger.warning(f"Timeout waiting for start operation on {service_id}")
+                                result = False
+                            
+                            response_data = {
+                                'success': result,
+                                'error': None if result else f"Failed to start {service_id}"
+                            }
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(response_data).encode())
+                            
+                        elif path.startswith('stop/'):
+                            service_id = path[5:]  # Remove 'stop/' prefix
+                            logger.info(f"Received POST /stop/ for {service_id}")
+                            
+                            # Validate service ID first
+                            if not self.manager.is_valid_service(service_id):
+                                response_data = {
+                                    'success': False,
+                                    'error': f"Unknown service: {service_id}"
+                                }
+                                self.send_response(200)
+                                self.send_header('Content-Type', 'application/json')
+                                self.send_header('Cache-Control', 'no-cache')
+                                self.end_headers()
+                                self.wfile.write(json.dumps(response_data).encode())
+                                return
+                            
+                            def stop_service_thread():
                                 try:
-                                    logger.info("Waiting for result from queue...")
-                                    # Use longer timeout for blockchain nodes
-                                    timeout = 15 if 'blockchain' in service_id else 10
-                                    result_type, result_data = result_queue.get(timeout=timeout)
-                                    logger.info(f"Got result from queue: {result_type}, {result_data}")
-                                    if result_type == 'success':
-                                        response = {'success': result_data, 'error': None if result_data else 'Failed to stop service'}
-                                    else:
-                                        response = {'success': False, 'error': result_data}
-                                except queue.Empty:
-                                    logger.error(f"Queue timeout after {timeout}s - no response from stop_service_thread")
-                                    response = {'success': False, 'error': f'Operation timed out after {timeout} seconds'}
-                            else:
-                                logger.error("Manager not available in /stop/ handler")
-                                response = {'success': False, 'error': 'Manager not available'}
-                        except Exception as e:
-                            logger.error(f"Exception in /stop/ handler: {e}", exc_info=True)
-                            response = {'success': False, 'error': str(e)}
-                        
-                        logger.info(f"Sending response for /stop/{service_id}: {response}")
-                        self.send_response(200)
-                        self.send_header('Content-type', 'application/json')
-                        self.send_header('Access-Control-Allow-Origin', '*')
-                        self.end_headers()
-                        try:
-                            self.wfile.write(json.dumps(response).encode())
-                        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                            logger.debug(f"Client disconnected during /stop/{service_id} response")
-                        
-                    elif self.path.startswith('/start/'):
-                        service_id = self.path.split('/')[-1]
-                        logger.info(f"Received POST /start/ for {service_id}")
-                        try:
-                            if self.manager:
-                                # Use threading to avoid blocking the HTTP handler
-                                import threading
-                                import queue
-                                
-                                result_queue = queue.Queue()
-                                manager_ref = self.manager  # Capture manager reference for thread
-                                
-                                def start_service_thread():
-                                    try:
-                                        import asyncio
-                                        loop = asyncio.new_event_loop()
-                                        asyncio.set_event_loop(loop)
-                                        success = loop.run_until_complete(manager_ref.start_service(service_id))
-                                        loop.close()
-                                        result_queue.put(('success', success))
-                                    except Exception as e:
-                                        result_queue.put(('error', str(e)))
-                                
-                                # Start the start operation in a separate thread
-                                thread = threading.Thread(target=start_service_thread, daemon=True)
-                                thread.start()
-                                
-                                # Wait for result with timeout (5 seconds)
+                                    # Create a new event loop for this thread
+                                    loop = asyncio.new_event_loop()
+                                    asyncio.set_event_loop(loop)
+                                    result = loop.run_until_complete(self.manager.stop_service(service_id))
+                                    self.manager.result_queue.put(('stop', service_id, result))
+                                except Exception as e:
+                                    logger.error(f"Error stopping {service_id}: {e}")
+                                    self.manager.result_queue.put(('stop', service_id, False))
+                                finally:
+                                    loop.close()
+                            
+                            # Start operation in background thread
+                            thread = threading.Thread(target=stop_service_thread)
+                            thread.daemon = True
+                            thread.start()
+                            
+                            # Wait for result with shorter timeout
+                            logger.info("Waiting for result from queue...")
+                            try:
+                                operation, service, result = self.manager.result_queue.get(timeout=15)
+                                logger.info(f"Got result from queue: {operation}, {result}")
+                            except queue.Empty:
+                                logger.warning(f"Timeout waiting for stop operation on {service_id}")
+                                result = False
+                            
+                            response_data = {
+                                'success': result,
+                                'error': None if result else f"Failed to stop {service_id}"
+                            }
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(response_data).encode())
+                            
+                        elif path.startswith('restart/'):
+                            service_id = path[8:]  # Remove 'restart/' prefix
+                            logger.info(f"Received POST /restart/ for {service_id}")
+                            
+                            # Validate service ID first
+                            if not self.manager.is_valid_service(service_id):
+                                response_data = {
+                                    'success': False,
+                                    'error': f"Unknown service: {service_id}"
+                                }
+                                self.send_response(200)
+                                self.send_header('Content-Type', 'application/json')
+                                self.send_header('Cache-Control', 'no-cache')
+                                self.end_headers()
+                                self.wfile.write(json.dumps(response_data).encode())
+                                return
+                            
+                            def restart_service_thread():
                                 try:
-                                    result_type, result_data = result_queue.get(timeout=5)
-                                    if result_type == 'success':
-                                        response = {'success': result_data, 'error': None if result_data else 'Failed to start service'}
-                                    else:
-                                        response = {'success': False, 'error': result_data}
-                                except queue.Empty:
-                                    response = {'success': False, 'error': 'Operation timed out'}
-                            else:
-                                response = {'success': False, 'error': 'Manager not available'}
-                        except Exception as e:
-                            response = {'success': False, 'error': str(e)}
-                        
-                        self.send_response(200)
-                        self.send_header('Content-type', 'application/json')
-                        self.send_header('Access-Control-Allow-Origin', '*')
+                                    # Create a new event loop for this thread
+                                    loop = asyncio.new_event_loop()
+                                    asyncio.set_event_loop(loop)
+                                    result = loop.run_until_complete(self.manager.restart_service(service_id))
+                                    self.manager.result_queue.put(('restart', service_id, result))
+                                except Exception as e:
+                                    logger.error(f"Error restarting {service_id}: {e}")
+                                    self.manager.result_queue.put(('restart', service_id, False))
+                                finally:
+                                    loop.close()
+                            
+                            # Start operation in background thread
+                            thread = threading.Thread(target=restart_service_thread)
+                            thread.daemon = True
+                            thread.start()
+                            
+                            # Wait for result with longer timeout for restart operations
+                            logger.info("Waiting for result from queue...")
+                            try:
+                                operation, service, result = self.manager.result_queue.get(timeout=15)
+                                logger.info(f"Got result from queue: {operation}, {result}")
+                            except queue.Empty:
+                                logger.warning(f"Timeout waiting for restart operation on {service_id}")
+                                result = False
+                            
+                            response_data = {
+                                'success': result,
+                                'error': None if result else f"Failed to restart {service_id}"
+                            }
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(response_data).encode())
+                            
+                        elif path.startswith('auto-recovery/enable/'):
+                            service_id = path[21:]  # Remove 'auto-recovery/enable/' prefix
+                            logger.info(f"Received POST /auto-recovery/enable/ for {service_id}")
+                            
+                            # Validate service ID first
+                            if not self.manager.is_valid_service(service_id):
+                                response_data = {
+                                    'success': False,
+                                    'error': f"Unknown service: {service_id}"
+                                }
+                                self.send_response(200)
+                                self.send_header('Content-Type', 'application/json')
+                                self.send_header('Cache-Control', 'no-cache')
+                                self.end_headers()
+                                self.wfile.write(json.dumps(response_data).encode())
+                                return
+                            
+                            success = self.manager.enable_auto_recovery(service_id)
+                            response_data = {
+                                'success': success,
+                                'error': None if success else f"Failed to enable auto-recovery for {service_id}"
+                            }
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(response_data).encode())
+                            
+                        elif path.startswith('auto-recovery/disable/'):
+                            service_id = path[22:]  # Remove 'auto-recovery/disable/' prefix
+                            logger.info(f"Received POST /auto-recovery/disable/ for {service_id}")
+                            
+                            # Validate service ID first
+                            if not self.manager.is_valid_service(service_id):
+                                response_data = {
+                                    'success': False,
+                                    'error': f"Unknown service: {service_id}"
+                                }
+                                self.send_response(200)
+                                self.send_header('Content-Type', 'application/json')
+                                self.send_header('Cache-Control', 'no-cache')
+                                self.end_headers()
+                                self.wfile.write(json.dumps(response_data).encode())
+                                return
+                            
+                            success = self.manager.disable_auto_recovery(service_id)
+                            response_data = {
+                                'success': success,
+                                'error': None if success else f"Failed to disable auto-recovery for {service_id}"
+                            }
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(response_data).encode())
+                            
+                        elif path.startswith('auto-recovery'):
+                            """Get auto-recovery status for all services"""
+                            auto_recovery_status = self.manager.get_all_auto_recovery_status()
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(auto_recovery_status).encode())
+                            
+                        elif self.path == '/health':
+                            """Get health information for all services"""
+                            health_info = self.manager.get_all_health_info()
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(health_info).encode())
+                            
+                        elif self.path == '/auto-recovery':
+                            """Get auto-recovery status for all services"""
+                            auto_recovery_status = self.manager.get_all_auto_recovery_status()
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(auto_recovery_status).encode())
+                            
+                        else:
+                            self.send_response(404)
+                            self.end_headers()
+                            
+                    except Exception as e:
+                        logger.error(f"Error handling POST request: {e}")
+                        self.send_response(500)
+                        self.send_header('Content-Type', 'application/json')
+                        self.send_header('Cache-Control', 'no-cache')
                         self.end_headers()
-                        try:
-                            self.wfile.write(json.dumps(response).encode())
-                        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                            logger.debug(f"Client disconnected during /start/{service_id} response")
-                        
-                    else:
-                        self.send_response(404)
-                        self.end_headers()
-            
-            # Start dashboard server with custom handler
-            port = 8090
+                        self.wfile.write(json.dumps({'success': False, 'error': str(e)}).encode())
             
             # Create a custom THREADED server class that stores the manager
             class CustomThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -1670,6 +2189,9 @@ class MediVoteBackgroundManager:
             action_button_class = "primary"  # Default to primary class
             buttons_html += f'<button onclick="toggleService(\'{service_id}\')" class="{action_button_class}" id="toggle-{service_id}">{action_button_text}</button>'
             
+            # Auto-recovery toggle button
+            buttons_html += f'<button onclick="toggleAutoRecovery(\'{service_id}\')" class="auto-recovery-btn enabled" id="auto-recovery-{service_id}">Auto-Recovery: ON</button>'
+            
             # Don't show Dashboard port for Network Dashboard
             dashboard_info = ""
             if service_id != 'network_dashboard':
@@ -1707,6 +2229,9 @@ class MediVoteBackgroundManager:
         button {{ padding: 8px 16px; margin: 2px; border: none; border-radius: 4px; cursor: pointer; }}
         button.danger {{ background: #dc3545; color: white; }}
         button.primary {{ background: #007bff; color: white; }}
+        button.auto-recovery-btn {{ background: #6c757d; color: white; }}
+        button.auto-recovery-btn.enabled {{ background: #28a745; }}
+        button.auto-recovery-btn.disabled {{ background: #6c757d; }}
         .warning {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
     </style>
 </head>
@@ -1729,8 +2254,7 @@ class MediVoteBackgroundManager:
         function openServerInterface(service_id) {{
             const serverPorts = {{
                 'backend': 8001,
-                'blockchain_node_1': 8546,
-                'blockchain_node_2': 8547,
+                'blockchain_node': 8546,
                 'incentive_system': 8082,
                 'network_coordinator': 8083,
                 'network_dashboard': 8084,
@@ -1739,15 +2263,32 @@ class MediVoteBackgroundManager:
             
             const port = serverPorts[service_id];
             if (port) {{
-                window.open(`http://localhost:${{port}}`, '_blank');
+                // First check if the service is running before trying to open it
+                fetch('/status')
+                    .then(response => response.json())
+                    .then(data => {{
+                        const serviceData = data[service_id];
+                        if (serviceData && serviceData.status === 'running') {{
+                            // Service is running, open interface immediately without HEAD request delay
+                            const testUrl = `http://localhost:${{port}}`;
+                            window.open(testUrl, '_blank');
+                            console.log(`Opening ${{service_id}} server interface on port ${{port}}`);
+                        }} else {{
+                            alert(`Cannot open ${{service_id}} interface: Service is not running. Please start the service first.`);
+                        }}
+                    }})
+                    .catch(error => {{
+                        console.error('Error checking service status:', error);
+                        // Fallback: try to open the interface anyway
+                        window.open(`http://localhost:${{port}}`, '_blank');
+                    }});
             }}
         }}
         
         function openDashboard(service_id) {{
             const dashboardPorts = {{
                 'backend': 8091,
-                'blockchain_node_1': 8093,
-                'blockchain_node_2': 8094,
+                'blockchain_node': 8093,
                 'incentive_system': 8095,
                 'network_coordinator': 8096,
                 'frontend': 8098
@@ -1755,7 +2296,12 @@ class MediVoteBackgroundManager:
             
             const port = dashboardPorts[service_id];
             if (port) {{
-                window.open(`http://localhost:${{port}}`, '_blank');
+                // Open dashboard directly without HEAD request check for instant response
+                const testUrl = `http://localhost:${{port}}`;
+                window.open(testUrl, '_blank');
+                
+                // Optional: Show a quick toast notification
+                console.log(`Opening dashboard for ${{service_id}} on port ${{port}}`);
             }}
         }}
         
@@ -1763,61 +2309,77 @@ class MediVoteBackgroundManager:
             window.open('http://localhost:8080', '_blank');
         }}
         
-        function updateServiceStatus(service_id, status) {{
+        function updateServiceStatus(service_id, serviceData) {{
             const serviceCard = document.getElementById(`service-${{service_id}}`);
-            if (!serviceCard) return;
-            const statusText = serviceCard.querySelector('.status-text');
-            const toggleButton = document.getElementById(`toggle-${{service_id}}`);
-            const restartButton = document.querySelector(`button[onclick="restartService('${{service_id}}')"]`);
-            const pidText = serviceCard.querySelector('.pid-text');
-            const cpuText = serviceCard.querySelector('.cpu-text');
-            const memoryText = serviceCard.querySelector('.memory-text');
-            const statusIcon = serviceCard.querySelector('h3');
-            
-            if (statusText) {{
-                statusText.textContent = status.status.charAt(0).toUpperCase() + status.status.slice(1);
+            if (!serviceCard) {{
+                console.error('Service card not found for', service_id);
+                return;
             }}
             
-            if (toggleButton) {{
-                // Always re-enable the button when updating status
-                toggleButton.disabled = false;
-                if (status.status === 'stopped') {{
-                    toggleButton.textContent = 'Start';
-                    toggleButton.className = 'primary';
-                }} else {{
+            // If no serviceData provided, just return (used by some event handlers)
+            if (!serviceData) {{
+                return;
+            }}
+            
+            // Update card styling based on status
+            if (serviceData.status === 'running') {{
+                serviceCard.classList.remove('stopped');
+                serviceCard.classList.add('running');
+            }} else {{
+                serviceCard.classList.remove('running');
+                serviceCard.classList.add('stopped');
+            }}
+            
+            // Update status text
+            const statusText = serviceCard.querySelector('.status-text');
+            if (statusText) {{
+                statusText.textContent = serviceData.status === 'running' ? 'Running' : 'Stopped';
+            }}
+            
+            // Update PID
+            const pidText = serviceCard.querySelector('.pid-text');
+            if (pidText) {{
+                pidText.textContent = serviceData.pid || '-';
+            }}
+            
+            // Update CPU
+            const cpuText = serviceCard.querySelector('.cpu-text');
+            if (cpuText) {{
+                const cpu = serviceData.cpu_percent || serviceData.cpu || 0;
+                cpuText.textContent = `${{cpu.toFixed(1)}}%`;
+            }}
+            
+            // Update Memory
+            const memText = serviceCard.querySelector('.memory-text');
+            if (memText) {{
+                const mem = serviceData.memory_mb || serviceData.mem || 0;
+                memText.textContent = `${{mem.toFixed(1)}} MB`;
+            }}
+            
+            // Update the toggle button
+            const toggleButton = document.getElementById(`toggle-${{service_id}}`);
+            if (toggleButton && !toggleButton.disabled) {{
+                if (serviceData.status === 'running') {{
                     toggleButton.textContent = 'Stop';
-                    toggleButton.className = 'danger';
+                    toggleButton.classList.remove('primary');
+                    toggleButton.classList.add('danger');
+                }} else {{
+                    toggleButton.textContent = 'Start';
+                    toggleButton.classList.remove('danger');
+                    toggleButton.classList.add('primary');
                 }}
             }}
             
-            // Reset restart button state when status updates
-            if (restartButton) {{
-                restartButton.disabled = false;
-                restartButton.textContent = 'Restart';
-            }}
-            
-            serviceCard.className = `service-card ${{status.status}}`;
-            
-            // Update status icon
-            if (statusIcon) {{
-                const serviceName = statusIcon.textContent.split(' ').slice(1).join(' ');
-                statusIcon.innerHTML = `${{status.status === 'running' ? '●' : '○'}} ${{serviceName}}`;
-            }}
-            
-            if (pidText) {{
-                // Handle PID field - it might be null, undefined, or a number
-                const pidValue = status.pid;
-                pidText.textContent = (pidValue !== null && pidValue !== undefined && pidValue !== '') ? pidValue : '-';
-            }}
-            if (cpuText) {{
-                // Handle both compressed (cpu) and full (cpu_percent) field names
-                const cpuValue = status.cpu !== undefined ? status.cpu : status.cpu_percent;
-                cpuText.textContent = (cpuValue !== null && cpuValue !== undefined) ? cpuValue.toFixed(1) + '%' : '-';
-            }}
-            if (memoryText) {{
-                // Handle both compressed (mem) and full (memory_mb) field names
-                const memValue = status.mem !== undefined ? status.mem : status.memory_mb;
-                memoryText.textContent = (memValue !== null && memValue !== undefined) ? memValue.toFixed(1) + ' MB' : '-';
+            // Update the service icon
+            const h3 = serviceCard.querySelector('h3');
+            if (h3) {{
+                // Get the service name from the h3 text content
+                const currentText = h3.textContent;
+                const serviceName = currentText.replace(/^[●○]\s*/, ''); // Remove existing icon
+                
+                // Update with new icon and preserved name
+                const newIcon = serviceData.status === 'running' ? '● ' : '○ ';
+                h3.textContent = newIcon + serviceName;
             }}
         }}
         
@@ -1870,7 +2432,7 @@ class MediVoteBackgroundManager:
         function toggleService(service_id) {{
             const toggleButton = document.getElementById(`toggle-${{service_id}}`);
             if (!toggleButton) {{
-                console.error('Toggle button not found for service:', service_id);
+                console.error('Toggle button not found for', service_id);
                 return;
             }}
             const isRunning = toggleButton.textContent === 'Stop';
@@ -1881,10 +2443,10 @@ class MediVoteBackgroundManager:
             
             if (isRunning) {{
                 const warnings = {{
-                    'blockchain_node_1': 'WARNING: Shutting down this node will result in loss of credibility points and network participation rewards.',
-                    'blockchain_node_2': 'WARNING: Shutting down this node will result in loss of credibility points and network participation rewards.',
+                    'blockchain_node': 'WARNING: Shutting down this node will result in loss of credibility points and network participation rewards.',
                     'incentive_system': 'WARNING: Shutting down the incentive system will stop reward distribution and node reputation tracking.',
                     'network_coordinator': 'WARNING: Shutting down the coordinator will affect network discovery and node communication.',
+                    'network_dashboard': 'WARNING: Shutting down the dashboard will disable network monitoring.',
                     'backend': 'WARNING: Shutting down the backend will disable voting functionality and API access.',
                     'frontend': 'WARNING: Shutting down the frontend will disable web interface access.'
                 }};
@@ -1958,7 +2520,7 @@ class MediVoteBackgroundManager:
         
         function restartService(service_id) {{
             if (confirm('Are you sure you want to restart this service?')) {{
-                const restartButton = document.querySelector(`button[onclick="restartService('${{service_id}}')"]`);
+                const restartButton = document.querySelector(`button[onclick="restartService('${service_id}')"]`);
                 if (restartButton) {{
                     restartButton.disabled = true;
                     restartButton.textContent = 'Restarting...';
@@ -1999,6 +2561,51 @@ class MediVoteBackgroundManager:
         
         // Initial status check after 1 second
         setTimeout(refreshServiceStatus, 1000);
+        
+        // Update auto-recovery status on load
+        setTimeout(updateAutoRecoveryStatus, 1100);
+        
+        function toggleAutoRecovery(serviceId) {{
+            const button = document.getElementById(`auto-recovery-${{serviceId}}`);
+            const isEnabled = button.textContent.includes('ON');
+            const action = isEnabled ? 'disable' : 'enable';
+            
+            fetch(`/auto-recovery/${{action}}/${{serviceId}}`, {{
+                method: 'POST',
+                headers: {{
+                    'Content-Type': 'application/json'
+                }}
+            }})
+            .then(response => response.json())
+            .then(data => {{
+                if (data.success) {{
+                    button.textContent = `Auto-Recovery: ${{isEnabled ? 'OFF' : 'ON'}}`;
+                    button.className = `auto-recovery-btn ${{isEnabled ? 'disabled' : 'enabled'}}`;
+                }} else {{
+                    console.error('Failed to toggle auto-recovery:', data.error);
+                }}
+            }})
+            .catch(error => {{
+                console.error('Error toggling auto-recovery:', error);
+            }});
+        }}
+        
+        function updateAutoRecoveryStatus() {{
+            fetch('/auto-recovery')
+            .then(response => response.json())
+            .then(data => {{
+                for (const [serviceId, isEnabled] of Object.entries(data)) {{
+                    const button = document.getElementById(`auto-recovery-${{serviceId}}`);
+                    if (button) {{
+                        button.textContent = `Auto-Recovery: ${{isEnabled ? 'ON' : 'OFF'}}`;
+                        button.className = `auto-recovery-btn ${{isEnabled ? 'enabled' : 'disabled'}}`;
+                    }}
+                }}
+            }})
+            .catch(error => {{
+                console.error('Error updating auto-recovery status:', error);
+            }});
+        }}
     </script>
 </body>
 </html>
@@ -2023,6 +2630,7 @@ class MediVoteBackgroundManager:
     def _get_process_resources(self, pid: int) -> tuple[float, float]:
         """Get CPU and memory usage for a process with proper caching"""
         import time
+        import psutil  # Ensure psutil is imported here
         current_time = time.time()
         
         # Check if we need to update (every 2 seconds)
@@ -2096,9 +2704,71 @@ class MediVoteBackgroundManager:
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 
+    def enable_auto_recovery(self, service_id: str) -> bool:
+        """Enable auto-recovery for a specific service"""
+        if service_id in self.service_configs:
+            self.auto_recovery_enabled[service_id] = True
+            logger.info(f"Auto-recovery enabled for {service_id}")
+            return True
+        else:
+            logger.error(f"Unknown service: {service_id}")
+            return False
+    
+    def disable_auto_recovery(self, service_id: str) -> bool:
+        """Disable auto-recovery for a specific service"""
+        if service_id in self.service_configs:
+            self.auto_recovery_enabled[service_id] = False
+            logger.info(f"Auto-recovery disabled for {service_id}")
+            return True
+        else:
+            logger.error(f"Unknown service: {service_id}")
+            return False
+    
+    def get_auto_recovery_status(self, service_id: str) -> bool:
+        """Get auto-recovery status for a specific service"""
+        return self.auto_recovery_enabled.get(service_id, False)
+    
+    def get_all_auto_recovery_status(self) -> dict:
+        """Get auto-recovery status for all services"""
+        return {service_id: self.get_auto_recovery_status(service_id) 
+                for service_id in self.service_configs}
+    
+    async def _verify_service_interface(self, service_id: str) -> bool:
+        """Verify that service provides proper HTTP interface"""
+        if service_id not in self.service_configs:
+            return False
+        
+        config = self.service_configs[service_id]
+        port = config.get("port")
+        
+        if not port:
+            return False
+        
+        try:
+            import requests
+            # Different endpoints for different services
+            test_endpoints = {
+                'backend': '/health',
+                'blockchain_node': '/status',
+                'incentive_system': '/status', 
+                'network_coordinator': '/',
+                'network_dashboard': '/',
+                'frontend': '/'
+            }
+            
+            endpoint = test_endpoints.get(service_id, '/')
+            url = f"http://localhost:{port}{endpoint}"
+            
+            response = requests.get(url, timeout=5)
+            return response.status_code in [200, 404]  # 404 is OK for some services
+            
+        except Exception as e:
+            logger.debug(f"Interface verification failed for {service_id}: {e}")
+            return False
+
 async def main():
     """Main function with enhanced graceful shutdown"""
-    print("🚀 MediVote Background Service Manager")
+    print("MediVote Background Service Manager")
     print("=" * 50)
     print("Starting all MediVote services in background")
     print("Each service will have its own dashboard")
@@ -2108,8 +2778,13 @@ async def main():
     
     # Set up signal handlers for graceful shutdown
     def signal_handler(signum, frame):
-        print(f"\n🛑 Received signal {signum}, initiating graceful shutdown...")
-        # This will be handled in the main loop
+        print(f"\nSTOP: Received signal {signum}, initiating graceful shutdown...")
+        # Disable auto-recovery for all services to prevent restart during shutdown
+        print("Disabling auto-recovery for all services...")
+        for service_id in manager.service_configs:
+            manager.auto_recovery_enabled[service_id] = False
+        # Mark shutdown as requested
+        manager._shutdown_requested = True
     
     # Register signal handlers
     import signal
@@ -2120,65 +2795,69 @@ async def main():
         # Start all services
         await manager.start_all_services()
         
-        print("\n✅ All services started successfully!")
-        print("🌐 Management Dashboard: http://localhost:8090")
-        print("\n🔗 Service URLs:")
+        print("\nAll services started successfully!")
+        print("Management Dashboard: http://localhost:8090")
+        print("\nService URLs:")
         for service_id, config in manager.service_configs.items():
             print(f"  • {config['name']}: http://localhost:{config['port']}")
-        print("\n📊 Dashboard URLs:")
+        print("\nDashboard URLs:")
         for service_id, config in manager.service_configs.items():
             if "dashboard_port" in config:
                 print(f"  • {config['name']} Dashboard: http://localhost:{config['dashboard_port']}")
         
-        print("\n⚠️ Credibility Warning: Stopping services may result in loss of credibility points!")
-        print("🛑 Press Ctrl+C to stop all services gracefully")
+        print("\nCredibility Warning: Stopping services may result in loss of credibility points!")
+        print("Press Ctrl+C to stop all services gracefully")
         
         # Keep running with periodic health checks
         shutdown_requested = False
+        health_check_counter = 0
         while not shutdown_requested:
             try:
-                # Check for shutdown signals
+                # Check for shutdown signals frequently
                 if hasattr(manager, '_shutdown_requested') and manager._shutdown_requested:
                     shutdown_requested = True
                     break
                 
-                # Periodic health check every 30 seconds
-                await asyncio.sleep(30)
+                # Sleep in short intervals to check for shutdown signal more frequently
+                await asyncio.sleep(1)  # Check every second instead of every 30 seconds
+                health_check_counter += 1
                 
-                # Optional: Log system health
-                if hasattr(manager, 'get_service_status'):
-                    status = manager.get_service_status()
-                    running_services = sum(1 for s in status.values() if s.get('status') == 'running')
-                    total_services = len(status)
-                    if running_services < total_services:
-                        logger.info(f"Health check: {running_services}/{total_services} services running")
-                
+                # Periodic health check every 30 seconds (30 * 1-second sleeps)
+                if health_check_counter >= 30:
+                    health_check_counter = 0
+                    # Optional: Log system health
+                    if hasattr(manager, 'get_service_status'):
+                        status = manager.get_service_status()
+                        running_services = sum(1 for s in status.values() if s.get('status') == 'running')
+                        total_services = len(status)
+                        if running_services < total_services:
+                            logger.info(f"Health check: {running_services}/{total_services} services running")
             except KeyboardInterrupt:
-                print("\n🛑 Keyboard interrupt received, initiating graceful shutdown...")
+                print("\nKeyboard interrupt received, initiating graceful shutdown...")
                 shutdown_requested = True
                 break
             except Exception as e:
                 logger.error(f"Error in main loop: {e}")
-                await asyncio.sleep(5)  # Wait before retrying
+                await asyncio.sleep(1)  # Wait before retrying
         
         # Graceful shutdown
         if shutdown_requested:
-            print("\n🔄 Initiating graceful shutdown...")
+            print("\nInitiating graceful shutdown...")
             await manager.stop_all_services()
-            print("✅ All services stopped gracefully")
+            print("All services stopped gracefully")
         
     except KeyboardInterrupt:
-        print("\n🛑 Keyboard interrupt received, stopping all services...")
+        print("\nKeyboard interrupt received, stopping all services...")
         await manager.stop_all_services()
-        print("✅ All services stopped gracefully")
+        print("All services stopped gracefully")
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         logger.error(f"Critical error in main function: {e}")
         
         # Emergency cleanup
         try:
-            print("🧹 Performing emergency cleanup...")
+            print("Performing emergency cleanup...")
             await manager.stop_all_services()
         except Exception as cleanup_error:
             logger.error(f"Error during emergency cleanup: {cleanup_error}")
@@ -2188,7 +2867,7 @@ async def main():
     finally:
         # Final cleanup
         try:
-            print("🧹 Performing final system cleanup...")
+            print("Performing final system cleanup...")
             
             # Clean up any remaining resources
             if hasattr(manager, '_cleanup_global_resources'):
@@ -2198,12 +2877,12 @@ async def main():
             if hasattr(manager, '_cleanup_temp_directories'):
                 await manager._cleanup_temp_directories()
             
-            print("✅ System cleanup completed")
+            print("System cleanup completed")
             
         except Exception as e:
             logger.error(f"Error during final cleanup: {e}")
     
-    print("🎯 MediVote Service Manager shutdown complete")
+    print("MediVote Service Manager shutdown complete")
     return 0
 
 if __name__ == "__main__":

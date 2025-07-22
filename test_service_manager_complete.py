@@ -328,10 +328,11 @@ class CompleteServiceManagerTestSuite:
         print("\n📡 Testing SSE Functionality...")
         
         try:
-            # Test SSE endpoint availability with very short timeout
-            response = requests.get(f"{self.base_url}/events", timeout=0.1)
+            # Test SSE endpoint availability with streaming=True and iter_content
+            # This allows us to test the connection without waiting for it to complete
+            response = requests.get(f"{self.base_url}/events", stream=True, timeout=2)
             
-            # Check if we got a response (even if it times out later)
+            # Check if we got a response (connection established)
             if response.status_code == 200:
                 self.log_test("SSE", "Endpoint Available", True, f"Status: {response.status_code}")
                 
@@ -347,19 +348,112 @@ class CompleteServiceManagerTestSuite:
                 has_sse_headers = 'no-cache' in cache_control and 'keep-alive' in connection
                 self.log_test("SSE", "SSE Headers", has_sse_headers, f"Cache-Control: {cache_control}, Connection: {connection}")
                 
+                # Read a small amount of data to verify streaming works
+                try:
+                    # Read first 100 bytes to verify data is being sent
+                    data = next(response.iter_content(chunk_size=100))
+                    if data:
+                        self.log_test("SSE", "Data Streaming", True, f"Received {len(data)} bytes")
+                    else:
+                        self.log_test("SSE", "Data Streaming", False, "No data received")
+                except StopIteration:
+                    self.log_test("SSE", "Data Streaming", False, "No data available")
+                except requests.exceptions.Timeout:
+                    # This is actually fine for SSE - it means connection is kept alive
+                    self.log_test("SSE", "Data Streaming", True, "Connection kept alive (expected)")
+                
+                # Close the connection properly
                 response.close()
                 
             else:
                 self.log_test("SSE", "Endpoint Available", False, f"Status: {response.status_code}")
                 
         except requests.exceptions.Timeout:
-            # Timeout is expected for SSE - this is actually a good sign
-            self.log_test("SSE", "Endpoint Available", True, "Timeout (expected for SSE)")
-            self.log_test("SSE", "Content Type", True, "SSE endpoint responding")
-            self.log_test("SSE", "SSE Headers", True, "SSE connection established")
+            # For SSE, a timeout on initial connection is a real problem
+            self.log_test("SSE", "Endpoint Available", False, "Failed to establish connection")
             
         except Exception as e:
             self.log_test("SSE", "Endpoint Available", False, error=e)
+    
+    def test_auto_recovery_control(self):
+        """Test auto-recovery enable/disable functionality"""
+        print("Testing auto-recovery control...")
+        
+        try:
+            # Test 1: Get initial auto-recovery status
+            response = requests.get(f"{self.base_url}/auto-recovery", timeout=10)
+            if response.status_code == 200:
+                status = response.json()
+                self.log_test("Auto-Recovery", "GET status", True, f"Retrieved {len(status)} services")
+            else:
+                self.log_test("Auto-Recovery", "GET status", False, f"Status code: {response.status_code}")
+                return
+            
+            # Test 2: Enable auto-recovery for backend
+            response = requests.post(f"{self.base_url}/auto-recovery/enable/backend", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success'):
+                    self.log_test("Auto-Recovery", "Enable backend", True)
+                else:
+                    self.log_test("Auto-Recovery", "Enable backend", False, data.get('error', 'Unknown error'))
+                    return
+            else:
+                self.log_test("Auto-Recovery", "Enable backend", False, f"Status code: {response.status_code}")
+                return
+            
+            # Test 3: Verify auto-recovery is enabled
+            response = requests.get(f"{self.base_url}/auto-recovery", timeout=10)
+            if response.status_code == 200:
+                status = response.json()
+                if status.get('backend', False):
+                    self.log_test("Auto-Recovery", "Verify enabled", True)
+                else:
+                    self.log_test("Auto-Recovery", "Verify enabled", False, "Backend auto-recovery not enabled")
+                    return
+            else:
+                self.log_test("Auto-Recovery", "Verify enabled", False, f"Status code: {response.status_code}")
+                return
+            
+            # Test 4: Disable auto-recovery for backend
+            response = requests.post(f"{self.base_url}/auto-recovery/disable/backend", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success'):
+                    self.log_test("Auto-Recovery", "Disable backend", True)
+                else:
+                    self.log_test("Auto-Recovery", "Disable backend", False, data.get('error', 'Unknown error'))
+                    return
+            else:
+                self.log_test("Auto-Recovery", "Disable backend", False, f"Status code: {response.status_code}")
+                return
+            
+            # Test 5: Verify auto-recovery is disabled
+            response = requests.get(f"{self.base_url}/auto-recovery", timeout=10)
+            if response.status_code == 200:
+                status = response.json()
+                if not status.get('backend', True):
+                    self.log_test("Auto-Recovery", "Verify disabled", True)
+                else:
+                    self.log_test("Auto-Recovery", "Verify disabled", False, "Backend auto-recovery still enabled")
+                    return
+            else:
+                self.log_test("Auto-Recovery", "Verify disabled", False, f"Status code: {response.status_code}")
+                return
+            
+            # Test 6: Test invalid service
+            response = requests.post(f"{self.base_url}/auto-recovery/enable/invalid_service", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if not data.get('success'):
+                    self.log_test("Auto-Recovery", "Invalid service", True, "Correctly rejected invalid service")
+                else:
+                    self.log_test("Auto-Recovery", "Invalid service", False, "Should have rejected invalid service")
+            else:
+                self.log_test("Auto-Recovery", "Invalid service", False, f"Unexpected status code: {response.status_code}")
+                
+        except Exception as e:
+            self.log_test("Auto-Recovery", "Control tests", False, str(e), e)
     
     def run_all_tests(self):
         """Run all tests"""
@@ -379,7 +473,8 @@ class CompleteServiceManagerTestSuite:
             self.test_process_cleanup,
             self.test_ui_functionality,
             self.test_service_health,
-            self.test_sse_functionality
+            self.test_sse_functionality,
+            self.test_auto_recovery_control
         ]
         
         for test_category in test_categories:

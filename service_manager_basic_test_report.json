@@ -1,0 +1,21 @@
+{
+  "test_suite": "MediVote Service Manager Basic Tests",
+  "timestamp": "2025-07-22T10:21:34.428224",
+  "summary": {
+    "total_tests": 11,
+    "passed": 11,
+    "failed": 0,
+    "errors": 0,
+    "success_rate": "100.0%"
+  },
+  "test_types": [
+    "Manager Initialization",
+    "Service Configuration",
+    "Auto-Recovery",
+    "Health Monitoring",
+    "Dashboard Generation",
+    "Concurrent Operations",
+    "Port Management",
+    "Error Handling"
+  ]
+}

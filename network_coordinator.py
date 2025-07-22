@@ -268,10 +268,10 @@ class MediVoteNetworkCoordinator:
             except Exception as e:
                 logger.debug(f"Failed to connect to bootstrap node {bootstrap['address']}: {e}")
         
-        # Check for local blockchain node
+        # Check for local blockchain node with improved error handling
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://localhost:8546/status", timeout=5) as response:
+                async with session.get("http://localhost:8546/status", timeout=10) as response:
                     if response.status == 200:
                         data = await response.json()
                         node_id = data.get("node_id", "local_blockchain_node")
@@ -283,17 +283,24 @@ class MediVoteNetworkCoordinator:
                                 port=8545,
                                 rpc_port=8546,
                                 node_type="full_node",
-                                last_seen=datetime.utcnow()
+                                last_seen=datetime.utcnow(),
+                                is_active=True  # Mark as active since we just got a response
                             )
                             self.nodes[node_id] = node
-                            logger.info(f"Discovered local blockchain node: {node_id}")
+                            logger.info(f"Discovered local blockchain node: {node_id} - Status: {data.get('is_running', 'unknown')}")
                         else:
-                            # Update existing local node
-                            self.nodes[node_id].last_seen = datetime.utcnow()
-                            self.nodes[node_id].is_active = True
+                            # Update existing local node - ensure it's marked as active
+                            node = self.nodes[node_id]
+                            node.last_seen = datetime.utcnow()
+                            node.is_active = True
+                            node.votes_processed = data.get("votes_processed", 0)
+                            node.blocks_processed = data.get("blocks_processed", 0)
+                            logger.debug(f"Updated local blockchain node: {node_id} - Active: True")
                             
         except Exception as e:
-            logger.debug(f"Failed to connect to local blockchain node: {e}")
+            logger.info(f"Local blockchain node not available yet: {e}")
+            # Don't mark existing nodes as inactive just because we can't connect right now
+            # Only mark as inactive if they haven't been seen for a while (handled in cleanup)
         
         # Check existing nodes for new peers
         for node in list(self.nodes.values()):
@@ -329,7 +336,7 @@ class MediVoteNetworkCoordinator:
         for node in self.nodes.values():
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(f"http://{node.address}:{node.rpc_port}/status", timeout=5) as response:
+                    async with session.get(f"http://{node.address}:{node.rpc_port}/status", timeout=8) as response:
                         if response.status == 200:
                             data = await response.json()
                             
@@ -339,12 +346,19 @@ class MediVoteNetworkCoordinator:
                             node.votes_processed = data.get("votes_processed", 0)
                             node.blocks_processed = data.get("blocks_processed", 0)
                             node.version = data.get("version", node.version)
+                            logger.debug(f"Updated node {node.node_id}: Active=True, Votes={node.votes_processed}, Blocks={node.blocks_processed}")
                         else:
+                            logger.info(f"Node {node.node_id} returned HTTP {response.status}, marking as inactive")
                             node.is_active = False
                 
             except Exception as e:
-                logger.debug(f"Failed to update status for node {node.node_id}: {e}")
-                node.is_active = False
+                logger.info(f"Failed to update status for node {node.node_id}: {e}")
+                # Only mark as inactive after a few failed attempts
+                # For now, just log the error but don't immediately mark as inactive
+                # The cleanup loop will handle nodes that haven't been seen for a while
+                if node.last_seen and (datetime.utcnow() - node.last_seen).total_seconds() > 120:  # 2 minutes
+                    logger.warning(f"Node {node.node_id} hasn't responded for 2+ minutes, marking as inactive")
+                    node.is_active = False
     
     async def _cleanup_loop(self):
         """Clean up inactive nodes"""
@@ -450,8 +464,52 @@ class MediVoteNetworkCoordinator:
             self._log_security_event("ADMIN_ACCESS", client_ip, "admin endpoint")
             return web.json_response(self.get_network_status())
         
+        async def shutdown_handler(request):
+            """Handle graceful shutdown requests"""
+            try:
+                # Security: Only allow shutdown from trusted/admin clients
+                client_ip = request.remote
+                if not self._is_admin_client(client_ip):
+                    self._log_security_event("UNAUTHORIZED_SHUTDOWN_ATTEMPT", client_ip)
+                    return web.json_response({"error": "Unauthorized"}, status=403)
+                
+                self._log_security_event("SHUTDOWN_REQUEST", client_ip, "shutdown endpoint")
+                logger.info("Shutdown request received via HTTP endpoint")
+                
+                # Immediate response to confirm shutdown initiation
+                response_data = {
+                    "message": "Network coordinator graceful shutdown initiated",
+                    "status": "shutting_down",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                
+                # Send response immediately
+                response = web.json_response(response_data, status=200)
+                
+                # Schedule shutdown after response is sent
+                async def delayed_shutdown():
+                    await asyncio.sleep(0.5)  # Brief delay to ensure response is sent
+                    logger.info("Executing graceful shutdown...")
+                    self.is_running = False
+                    # Save network state
+                    await self._save_nodes()
+                    # Signal shutdown
+                    import os
+                    import signal
+                    os.kill(os.getpid(), signal.SIGTERM)
+                
+                # Schedule shutdown
+                asyncio.create_task(delayed_shutdown())
+                
+                return response
+                
+            except Exception as e:
+                logger.error(f"Shutdown handler error: {e}")
+                return web.json_response({"error": "Shutdown failed", "details": str(e)}, status=500)
+        
         app.router.add_get('/', status_handler)
         app.router.add_get('/admin', admin_handler)
+        app.router.add_post('/shutdown', shutdown_handler)  # Add shutdown endpoint
         
         runner = web.AppRunner(app)
         await runner.setup()

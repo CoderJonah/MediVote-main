@@ -128,6 +128,7 @@ class NodeIncentiveSystem:
         """Setup web routes for the incentive system"""
         self.app.router.add_get('/', self._status_handler)
         self.app.router.add_get('/status', self._status_handler)
+        self.app.router.add_get('/health', self._health_handler)
         self.app.router.add_post('/api/register-node', self._register_node_handler)
         self.app.router.add_post('/api/verify-node', self._verify_node_handler)
         self.app.router.add_post('/api/request-ballot', self._request_ballot_handler)
@@ -135,6 +136,43 @@ class NodeIncentiveSystem:
         self.app.router.add_get('/api/ballot-requests', self._ballot_requests_handler)
         self.app.router.add_post('/api/approve-ballot', self._approve_ballot_handler)
         self.app.router.add_get('/api/incentive-stats', self._incentive_stats_handler)
+        self.app.router.add_post('/shutdown', self._shutdown_handler)  # Add shutdown endpoint
+    
+    async def _shutdown_handler(self, request):
+        """Handle graceful shutdown requests"""
+        try:
+            logger.info("Shutdown request received via HTTP endpoint")
+            
+            # Immediate response to confirm shutdown initiation
+            response_data = {
+                "message": "Graceful shutdown initiated",
+                "status": "shutting_down",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            # Send response immediately
+            response = web.json_response(response_data, status=200)
+            
+            # Schedule shutdown after response is sent
+            async def delayed_shutdown():
+                await asyncio.sleep(0.5)  # Brief delay to ensure response is sent
+                logger.info("Executing graceful shutdown...")
+                self.is_running = False
+                # Save any critical data
+                await self._save_credentials()
+                # Signal shutdown
+                import os
+                import signal
+                os.kill(os.getpid(), signal.SIGTERM)
+            
+            # Schedule shutdown
+            asyncio.create_task(delayed_shutdown())
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Shutdown handler error: {e}")
+            return web.json_response({"error": "Shutdown failed", "details": str(e)}, status=500)
     
     async def _register_node_handler(self, request):
         """Handle node registration"""
@@ -430,6 +468,19 @@ class NodeIncentiveSystem:
             
         except Exception as e:
             logger.error(f"Status error: {e}")
+            return web.json_response({"error": str(e)}, status=500)
+    
+    async def _health_handler(self, request):
+        """Handle health check endpoint"""
+        try:
+            # Simple health check - verify the service is responsive
+            return web.json_response({
+                "status": "healthy",
+                "service": "node_incentive_system",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        except Exception as e:
+            logger.error(f"Health check error: {e}")
             return web.json_response({"error": str(e)}, status=500)
     
     async def _incentive_stats_handler(self, request):

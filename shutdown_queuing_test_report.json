@@ -1,0 +1,95 @@
+{
+  "test_summary": {
+    "total_tests": 14,
+    "passed_tests": 14,
+    "failed_tests": 0,
+    "success_rate": "100.0%"
+  },
+  "test_results": [
+    {
+      "test": "Shutdown Time Tracking",
+      "success": true,
+      "details": "last_shutdown_time attribute exists",
+      "timestamp": "2025-07-22T09:50:09.496495"
+    },
+    {
+      "test": "Throttle Delay Config",
+      "success": true,
+      "details": "Throttle delay set to 2.0s",
+      "timestamp": "2025-07-22T09:50:09.497999"
+    },
+    {
+      "test": "Bulk Shutdown Mode",
+      "success": true,
+      "details": "Bulk shutdown mode flag exists",
+      "timestamp": "2025-07-22T09:50:09.497999"
+    },
+    {
+      "test": "Enhanced Timeouts",
+      "success": true,
+      "details": "Extended 15s timeout for critical services found",
+      "timestamp": "2025-07-22T09:50:09.502513"
+    },
+    {
+      "test": "Retry Logic",
+      "success": true,
+      "details": "HTTP retry mechanism found",
+      "timestamp": "2025-07-22T09:50:09.502513"
+    },
+    {
+      "test": "Enhanced Error Handling",
+      "success": true,
+      "details": "Specific timeout exception handling found",
+      "timestamp": "2025-07-22T09:50:09.502513"
+    },
+    {
+      "test": "Bulk Mode Activation",
+      "success": true,
+      "details": "Bulk shutdown mode activation found",
+      "timestamp": "2025-07-22T09:50:09.504516"
+    },
+    {
+      "test": "Enhanced Delays",
+      "success": true,
+      "details": "2.0s delays between services found",
+      "timestamp": "2025-07-22T09:50:09.504516"
+    },
+    {
+      "test": "Bulk Mode Cleanup",
+      "success": true,
+      "details": "Bulk shutdown mode cleanup found",
+      "timestamp": "2025-07-22T09:50:09.504516"
+    },
+    {
+      "test": "Tiered Service Classification",
+      "success": true,
+      "details": "Tier 1 and Tier 2 classification intact",
+      "timestamp": "2025-07-22T09:50:09.506516"
+    },
+    {
+      "test": "Tier 1 Services",
+      "success": true,
+      "details": "Critical services properly assigned to Tier 1",
+      "timestamp": "2025-07-22T09:50:09.506516"
+    },
+    {
+      "test": "Tier 2 Services",
+      "success": true,
+      "details": "Simple services properly assigned to Tier 2",
+      "timestamp": "2025-07-22T09:50:09.506516"
+    },
+    {
+      "test": "Dual Mode Throttling",
+      "success": true,
+      "details": "Different throttling for bulk vs individual found",
+      "timestamp": "2025-07-22T09:50:09.509021"
+    },
+    {
+      "test": "Throttling Logging",
+      "success": true,
+      "details": "Enhanced throttling logging found",
+      "timestamp": "2025-07-22T09:50:09.509021"
+    }
+  ],
+  "timestamp": "2025-07-22T09:50:09.509021"
+}

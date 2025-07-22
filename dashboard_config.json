@@ -9,19 +9,16 @@
   "network": {
     "coordinator_url": "http://localhost:8083",
     "bootstrap_nodes": [
-      "node1.medivote.net:8546",
-      "node2.medivote.net:8546",
-      "node3.medivote.net:8546"
-    ]
+      "127.0.0.1:8546"
+    ],
+    "auto_discovery": true,
+    "discovery_interval": 30
   },
   "storage": {
     "data_dir": "./dashboard_data",
     "backup_interval": 3600
   },
   "security": {
-    "trusted_ips": ["127.0.0.1", "localhost", "::1"],
-    "rate_limit_window": 60,
-    "max_requests_per_window": 200,
-    "enable_security_logging": true
+    "trusted_ips": ["127.0.0.1", "localhost", "::1"]
   }
 }

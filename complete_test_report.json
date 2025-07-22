@@ -1,10 +1,10 @@
 {
-  "timestamp": "2025-07-21T19:07:58.436483",
+  "timestamp": "2025-07-22T01:08:25.755081",
   "summary": {
-    "total_tests": 59,
-    "passed_tests": 58,
-    "failed_tests": 1,
-    "success_rate": 98.30508474576271,
+    "total_tests": 68,
+    "passed_tests": 68,
+    "failed_tests": 0,
+    "success_rate": 100.0,
     "assessment": "\ud83c\udfc6 EXCELLENT - Service Manager is production-ready!"
   },
   "categories": {
@@ -53,8 +53,12 @@
       "failed": 0
     },
     "SSE": {
-      "passed": 0,
-      "failed": 1
+      "passed": 4,
+      "failed": 0
+    },
+    "Auto-Recovery": {
+      "passed": 6,
+      "failed": 0
     }
   },
   "results": [
@@ -64,7 +68,7 @@
       "passed": true,
       "details": "Status: 200",
       "error": null,
-      "timestamp": "2025-07-21T19:06:45.945986"
+      "timestamp": "2025-07-22T01:06:57.833825"
     },
     {
       "category": "API",
@@ -72,7 +76,7 @@
       "passed": true,
       "details": "Got 7 services",
       "error": null,
-      "timestamp": "2025-07-21T19:06:48.868237"
+      "timestamp": "2025-07-22T01:07:00.607277"
     },
     {
       "category": "API",
@@ -80,7 +84,7 @@
       "passed": true,
       "details": "Status: running",
       "error": null,
-      "timestamp": "2025-07-21T19:06:48.868237"
+      "timestamp": "2025-07-22T01:07:00.607277"
     },
     {
       "category": "API",
@@ -88,7 +92,7 @@
       "passed": true,
       "details": "Status: running",
       "error": null,
-      "timestamp": "2025-07-21T19:06:48.868237"
+      "timestamp": "2025-07-22T01:07:00.607277"
     },
     {
       "category": "API",
@@ -96,7 +100,7 @@
       "passed": true,
       "details": "Status: running",
       "error": null,
-      "timestamp": "2025-07-21T19:06:48.868237"
+      "timestamp": "2025-07-22T01:07:00.607277"
     },
     {
       "category": "API",
@@ -104,7 +108,7 @@
       "passed": true,
       "details": "Status: running",
       "error": null,
-      "timestamp": "2025-07-21T19:06:48.868237"
+      "timestamp": "2025-07-22T01:07:00.607277"
     },
     {
       "category": "API",
@@ -112,7 +116,7 @@
       "passed": true,
       "details": "Status: running",
       "error": null,
-      "timestamp": "2025-07-21T19:06:48.868237"
+      "timestamp": "2025-07-22T01:07:00.607277"
     },
     {
       "category": "API",
@@ -120,7 +124,7 @@
       "passed": true,
       "details": "Status: running",
       "error": null,
-      "timestamp": "2025-07-21T19:06:48.868237"
+      "timestamp": "2025-07-22T01:07:00.607277"
     },
     {
       "category": "API",
@@ -128,7 +132,7 @@
       "passed": true,
       "details": "Status: running",
       "error": null,
-      "timestamp": "2025-07-21T19:06:48.868237"
+      "timestamp": "2025-07-22T01:07:00.607277"
     },
     {
       "category": "OPERATIONS",
@@ -136,7 +140,7 @@
       "passed": true,
       "details": "Response: {'success': True, 'error': None}",
       "error": null,
-      "timestamp": "2025-07-21T19:06:55.542964"
+      "timestamp": "2025-07-22T01:07:05.409981"
     },
     {
       "category": "OPERATIONS",
@@ -144,7 +148,7 @@
       "passed": true,
       "details": "Response: {'success': True, 'error': None}",
       "error": null,
-      "timestamp": "2025-07-21T19:07:00.178780"
+      "timestamp": "2025-07-22T01:07:11.726435"
     },
     {
       "category": "OPERATIONS",
@@ -152,7 +156,7 @@
       "passed": true,
       "details": "Response: {'success': True, 'error': None}",
       "error": null,
-      "timestamp": "2025-07-21T19:07:02.403656"
+      "timestamp": "2025-07-22T01:07:16.859573"
     },
     {
       "category": "RESOURCES",
@@ -160,15 +164,15 @@
       "passed": true,
       "details": "CPU: 0.0",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.067669"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
       "test": "backend Memory Monitoring",
       "passed": true,
-      "details": "Memory: 42.3203125 MB",
+      "details": "Memory: 0.0 MB",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.067669"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
@@ -176,15 +180,15 @@
       "passed": true,
       "details": "CPU value: 0.0 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.067669"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
       "test": "backend Memory Numeric",
       "passed": true,
-      "details": "Memory value: 42.3203125 (type: <class 'float'>)",
+      "details": "Memory value: 0.0 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.067669"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
@@ -192,15 +196,15 @@
       "passed": true,
       "details": "CPU: 0.0",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.067669"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
       "test": "blockchain_node_1 Memory Monitoring",
       "passed": true,
-      "details": "Memory: 41.125 MB",
+      "details": "Memory: 40.97265625 MB",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
@@ -208,15 +212,15 @@
       "passed": true,
       "details": "CPU value: 0.0 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
       "test": "blockchain_node_1 Memory Numeric",
       "passed": true,
-      "details": "Memory value: 41.125 (type: <class 'float'>)",
+      "details": "Memory value: 40.97265625 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
@@ -224,15 +228,15 @@
       "passed": true,
       "details": "CPU: 0.0",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
       "test": "blockchain_node_2 Memory Monitoring",
       "passed": true,
-      "details": "Memory: 40.8046875 MB",
+      "details": "Memory: 41.00390625 MB",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
@@ -240,15 +244,15 @@
       "passed": true,
       "details": "CPU value: 0.0 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
       "test": "blockchain_node_2 Memory Numeric",
       "passed": true,
-      "details": "Memory value: 40.8046875 (type: <class 'float'>)",
+      "details": "Memory value: 41.00390625 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.503991"
     },
     {
       "category": "RESOURCES",
@@ -256,15 +260,15 @@
       "passed": true,
       "details": "CPU: 0.0",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
       "test": "incentive_system Memory Monitoring",
       "passed": true,
-      "details": "Memory: 33.5390625 MB",
+      "details": "Memory: 34.1015625 MB",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
@@ -272,15 +276,15 @@
       "passed": true,
       "details": "CPU value: 0.0 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
       "test": "incentive_system Memory Numeric",
       "passed": true,
-      "details": "Memory value: 33.5390625 (type: <class 'float'>)",
+      "details": "Memory value: 34.1015625 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
@@ -288,15 +292,15 @@
       "passed": true,
       "details": "CPU: 0.0",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
       "test": "network_coordinator Memory Monitoring",
       "passed": true,
-      "details": "Memory: 35.84375 MB",
+      "details": "Memory: 35.66015625 MB",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
@@ -304,15 +308,15 @@
       "passed": true,
       "details": "CPU value: 0.0 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
       "test": "network_coordinator Memory Numeric",
       "passed": true,
-      "details": "Memory value: 35.84375 (type: <class 'float'>)",
+      "details": "Memory value: 35.66015625 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
@@ -320,15 +324,15 @@
       "passed": true,
       "details": "CPU: 0.0",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
       "test": "network_dashboard Memory Monitoring",
       "passed": true,
-      "details": "Memory: 32.94140625 MB",
+      "details": "Memory: 33.57421875 MB",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
@@ -336,15 +340,15 @@
       "passed": true,
       "details": "CPU value: 0.0 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
       "test": "network_dashboard Memory Numeric",
       "passed": true,
-      "details": "Memory value: 32.94140625 (type: <class 'float'>)",
+      "details": "Memory value: 33.57421875 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
@@ -352,15 +356,15 @@
       "passed": true,
       "details": "CPU: 0.0",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
       "test": "frontend Memory Monitoring",
       "passed": true,
-      "details": "Memory: 30.33203125 MB",
+      "details": "Memory: 30.078125 MB",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
@@ -368,15 +372,15 @@
       "passed": true,
       "details": "CPU value: 0.0 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "RESOURCES",
       "test": "frontend Memory Numeric",
       "passed": true,
-      "details": "Memory value: 30.33203125 (type: <class 'float'>)",
+      "details": "Memory value: 30.078125 (type: <class 'float'>)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.068668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "PORTS",
@@ -384,7 +388,7 @@
       "passed": true,
       "details": "Open",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.069668"
+      "timestamp": "2025-07-22T01:07:19.504992"
     },
     {
       "category": "PORTS",
@@ -392,7 +396,7 @@
       "passed": true,
       "details": "Open",
       "error": null,
-      "timestamp": "2025-07-21T19:07:05.070669"
+      "timestamp": "2025-07-22T01:07:19.506497"
     },
     {
       "category": "ERROR_HANDLING",
@@ -400,7 +404,7 @@
       "passed": true,
       "details": "Status: 200",
       "error": null,
-      "timestamp": "2025-07-21T19:07:09.351112"
+      "timestamp": "2025-07-22T01:07:21.570907"
     },
     {
       "category": "ERROR_HANDLING",
@@ -408,7 +412,7 @@
       "passed": true,
       "details": "Status: 404",
       "error": null,
-      "timestamp": "2025-07-21T19:07:11.438729"
+      "timestamp": "2025-07-22T01:07:23.612922"
     },
     {
       "category": "CONCURRENCY",
@@ -416,23 +420,23 @@
       "passed": true,
       "details": "Success: 3/3",
       "error": null,
-      "timestamp": "2025-07-21T19:07:18.100750"
+      "timestamp": "2025-07-22T01:07:28.554643"
     },
     {
       "category": "MEMORY",
       "test": "Service Manager Memory Usage",
       "passed": true,
-      "details": "Memory: 50.5 MB",
+      "details": "Memory: 51.3 MB",
       "error": null,
-      "timestamp": "2025-07-21T19:07:50.291507"
+      "timestamp": "2025-07-22T01:08:02.950347"
     },
     {
       "category": "CLEANUP",
       "test": "Process Cleanup",
       "passed": true,
-      "details": "Processes: 399 -> 399, Has PID info: True",
+      "details": "Processes: 368 -> 368, Has PID info: True",
       "error": null,
-      "timestamp": "2025-07-21T19:07:53.196823"
+      "timestamp": "2025-07-22T01:08:05.807886"
     },
     {
       "category": "UI",
@@ -440,7 +444,7 @@
       "passed": true,
       "details": "Contains MediVote branding",
       "error": null,
-      "timestamp": "2025-07-21T19:07:55.310920"
+      "timestamp": "2025-07-22T01:08:07.827445"
     },
     {
       "category": "UI",
@@ -448,7 +452,7 @@
       "passed": true,
       "details": "Contains service cards",
       "error": null,
-      "timestamp": "2025-07-21T19:07:55.310920"
+      "timestamp": "2025-07-22T01:08:07.827445"
     },
     {
       "category": "UI",
@@ -456,63 +460,63 @@
       "passed": true,
       "details": "Contains action buttons",
       "error": null,
-      "timestamp": "2025-07-21T19:07:55.310920"
+      "timestamp": "2025-07-22T01:08:07.827445"
     },
     {
       "category": "HEALTH",
       "test": "backend Running",
       "passed": true,
-      "details": "PID: 273436",
+      "details": "PID: 347428",
       "error": null,
-      "timestamp": "2025-07-21T19:07:58.162733"
+      "timestamp": "2025-07-22T01:08:10.613108"
     },
     {
       "category": "HEALTH",
       "test": "blockchain_node_1 Running",
       "passed": true,
-      "details": "PID: 38400",
+      "details": "PID: 343476",
       "error": null,
-      "timestamp": "2025-07-21T19:07:58.162733"
+      "timestamp": "2025-07-22T01:08:10.613108"
     },
     {
       "category": "HEALTH",
       "test": "blockchain_node_2 Running",
       "passed": true,
-      "details": "PID: 270172",
+      "details": "PID: 346240",
       "error": null,
-      "timestamp": "2025-07-21T19:07:58.163734"
+      "timestamp": "2025-07-22T01:08:10.613108"
     },
     {
       "category": "HEALTH",
       "test": "incentive_system Running",
       "passed": true,
-      "details": "PID: 260504",
+      "details": "PID: 336800",
       "error": null,
-      "timestamp": "2025-07-21T19:07:58.163734"
+      "timestamp": "2025-07-22T01:08:10.613108"
     },
     {
       "category": "HEALTH",
       "test": "network_coordinator Running",
       "passed": true,
-      "details": "PID: 267632",
+      "details": "PID: 347132",
       "error": null,
-      "timestamp": "2025-07-21T19:07:58.163734"
+      "timestamp": "2025-07-22T01:08:10.613108"
     },
     {
       "category": "HEALTH",
       "test": "network_dashboard Running",
       "passed": true,
-      "details": "PID: 277192",
+      "details": "PID: 344412",
       "error": null,
-      "timestamp": "2025-07-21T19:07:58.163734"
+      "timestamp": "2025-07-22T01:08:10.613108"
     },
     {
       "category": "HEALTH",
       "test": "frontend Running",
       "passed": true,
-      "details": "PID: 243428",
+      "details": "PID: 347980",
       "error": null,
-      "timestamp": "2025-07-21T19:07:58.163734"
+      "timestamp": "2025-07-22T01:08:10.613108"
     },
     {
       "category": "HEALTH",
@@ -520,18 +524,88 @@
       "passed": true,
       "details": "Running: 7/7 (100.0%)",
       "error": null,
-      "timestamp": "2025-07-21T19:07:58.163734"
+      "timestamp": "2025-07-22T01:08:10.613108"
     },
     {
       "category": "SSE",
       "test": "Endpoint Available",
-      "passed": false,
+      "passed": true,
+      "details": "Status: 200",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:12.643334"
+    },
+    {
+      "category": "SSE",
+      "test": "Content Type",
+      "passed": true,
+      "details": "Content-Type: text/event-stream",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:12.643334"
+    },
+    {
+      "category": "SSE",
+      "test": "SSE Headers",
+      "passed": true,
+      "details": "Cache-Control: no-cache, Connection: keep-alive",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:12.643334"
+    },
+    {
+      "category": "SSE",
+      "test": "Data Streaming",
+      "passed": true,
+      "details": "Received 100 bytes",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:13.368535"
+    },
+    {
+      "category": "Auto-Recovery",
+      "test": "GET status",
+      "passed": true,
+      "details": "Retrieved 7 services",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:15.425362"
+    },
+    {
+      "category": "Auto-Recovery",
+      "test": "Enable backend",
+      "passed": true,
       "details": "",
-      "error": "HTTPConnectionPool(host='localhost', port=8090): Read timed out.",
-      "timestamp": "2025-07-21T19:07:58.435483"
+      "error": null,
+      "timestamp": "2025-07-22T01:08:17.489031"
+    },
+    {
+      "category": "Auto-Recovery",
+      "test": "Verify enabled",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:19.558017"
+    },
+    {
+      "category": "Auto-Recovery",
+      "test": "Disable backend",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:21.607563"
+    },
+    {
+      "category": "Auto-Recovery",
+      "test": "Verify disabled",
+      "passed": true,
+      "details": "",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:23.667811"
+    },
+    {
+      "category": "Auto-Recovery",
+      "test": "Invalid service",
+      "passed": true,
+      "details": "Correctly rejected invalid service",
+      "error": null,
+      "timestamp": "2025-07-22T01:08:25.754080"
     }
   ],
-  "errors": [
-    "[SSE] Endpoint Available: HTTPConnectionPool(host='localhost', port=8090): Read timed out."
-  ]
+  "errors": []
 }

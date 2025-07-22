@@ -91,15 +91,16 @@ class DecentralizedNetworkDemo:
             return False
     
     async def start_blockchain_nodes(self, num_nodes: int = 3):
-        """Start multiple blockchain nodes"""
-        print(f"🚀 Starting {num_nodes} Blockchain Nodes...")
+        """Start multiple blockchain nodes (for demo only - in production, run on separate machines)"""
+        print(f"🚀 Starting {num_nodes} Blockchain Nodes (Demo Mode)...")
+        print("⚠️  Note: In production, each node should run on a separate machine!")
         
         for i in range(num_nodes):
             node_id = f"demo_node_{i+1}"
             port = 8545 + i
             rpc_port = 8546 + i
             
-            print(f"Starting {node_id} on port {port}...")
+            print(f"Starting Demo {node_id} on port {port}...")
             
             try:
                 # Create node configuration
@@ -128,20 +129,20 @@ class DecentralizedNetworkDemo:
                         "gas_price": "20 gwei"
                     },
                     "storage": {
-                        "data_dir": f"./blockchain_data_{i+1}",
+                        "data_dir": f"./demo_blockchain_data_{i+1}",
                         "backup_interval": 3600,
                         "max_storage_gb": 1
                     }
                 }
                 
                 # Save node configuration
-                config_file = f"node_config_{i+1}.json"
+                config_file = f"demo_node_config_{i+1}.json"
                 with open(config_file, 'w') as f:
                     json.dump(node_config, f, indent=2)
                 
                 # Start node process
                 node_process = subprocess.Popen([
-                    sys.executable, "blockchain_node.py"
+                    sys.executable, "blockchain_node.py", "--config", config_file
                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 
                 self.nodes[node_id] = node_process
@@ -150,14 +151,15 @@ class DecentralizedNetworkDemo:
                 await asyncio.sleep(2)
                 
                 if node_process.poll() is None:
-                    print(f"✅ {node_id} started successfully")
+                    print(f"✅ {node_id} started successfully (demo only)")
                 else:
                     print(f"❌ Failed to start {node_id}")
                 
             except Exception as e:
                 print(f"❌ Error starting {node_id}: {e}")
         
-        print(f"✅ Started {len(self.nodes)} blockchain nodes")
+        print(f"✅ Started {len(self.nodes)} demo blockchain nodes")
+        print("ℹ️  Remember: For production, run each node on a separate machine!")
     
     async def simulate_voting_activity(self):
         """Simulate voting activity across the network"""
@@ -271,7 +273,7 @@ class DecentralizedNetworkDemo:
         
         # Clean up config files
         for i in range(3):
-            config_file = f"node_config_{i+1}.json"
+            config_file = f"demo_node_config_{i+1}.json"
             if os.path.exists(config_file):
                 os.remove(config_file)
                 print(f"🗑️  Removed {config_file}")

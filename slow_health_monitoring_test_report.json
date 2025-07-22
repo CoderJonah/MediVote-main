@@ -1,7 +1,7 @@
 {
   "test_suite": "Slow Health Monitoring Test",
-  "timestamp": "2025-07-21T19:40:58.168424",
-  "duration_seconds": 57.11391520500183,
+  "timestamp": "2025-07-21T20:58:59.820059",
+  "duration_seconds": 56.38991689682007,
   "total_tests": 5,
   "passed_tests": 5,
   "success_rate": 100.0,
@@ -38,7 +38,7 @@
       "category": "INTERVAL",
       "test_name": "Health Check Timing",
       "passed": true,
-      "details": "Average: 33.4s, 100.0% reasonable",
+      "details": "Average: 32.4s, 100.0% reasonable",
       "error": null
     },
     {

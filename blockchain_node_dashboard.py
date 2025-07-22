@@ -243,6 +243,7 @@ class BlockchainNodeDashboard:
         <div class="header">
             <h1>Blockchain Node Dashboard</h1>
             <p>Monitor and manage your MediVote blockchain node</p>
+            <p style="font-size: 0.9em; opacity: 0.8;">For a truly decentralized network, run nodes on separate machines</p>
         </div>
         
         <div class="warning">
