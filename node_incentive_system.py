@@ -68,11 +68,45 @@ class NodeIncentiveSystem:
         self.app = web.Application()
         self.is_running = False
         
+        # Add CORS middleware
+        self._setup_cors()
+        
         # Load configuration
         self.config = self._load_config()
         
         # Setup routes
         self._setup_routes()
+    
+    def _setup_cors(self):
+        """Setup CORS middleware for cross-origin requests"""
+        async def cors_middleware(request, handler):
+            """CORS middleware to handle cross-origin requests"""
+            try:
+                # Handle preflight OPTIONS requests
+                if request.method == 'OPTIONS':
+                    response = web.Response()
+                else:
+                    response = await handler(request)
+                
+                # Add CORS headers to all responses
+                response.headers['Access-Control-Allow-Origin'] = '*'
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+                
+                return response
+                
+            except Exception as e:
+                logger.error(f"CORS middleware error: {e}")
+                # Create error response with CORS headers
+                response = web.json_response({"error": "Internal server error"}, status=500)
+                response.headers['Access-Control-Allow-Origin'] = '*'
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                return response
+        
+        # Add the middleware to the app
+        self.app.middlewares.append(cors_middleware)
     
     def _load_config(self) -> Dict[str, Any]:
         """Load incentive system configuration"""
@@ -83,7 +117,7 @@ class NodeIncentiveSystem:
                 "host": "0.0.0.0",
                 "verification_interval": 300,  # 5 minutes
                 "max_ballots_per_node": 10,
-                "min_uptime_hours": 24,
+                "min_uptime_hours": 0,
                 "reputation_decay_rate": 0.1,
                 "reputation_boost_rate": 0.2
             },
@@ -665,7 +699,7 @@ class NodeIncentiveSystem:
                     # Gradual reputation decay for inactive nodes
                     if not credential.is_active:
                         credential.reputation_score = max(
-                            credential.reputation_score - self.config["reputation"]["reputation_decay_rate"],
+                            credential.reputation_score - self.config["incentive"]["reputation_decay_rate"],
                             self.config["reputation"]["min_score"]
                         )
                 

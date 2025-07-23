@@ -80,6 +80,12 @@ async function loadResults() {
         
         loadingContainer.style.display = 'none';
         
+        // Check if voting is still active
+        if (response.voting_status === 'active') {
+            showVotingActive(response);
+            return;
+        }
+        
         if (!response.results || response.results.length === 0) {
             showNoResults();
             return;
@@ -92,6 +98,35 @@ async function loadResults() {
         loadingContainer.style.display = 'none';
         AlertSystem.show('Failed to load results. Please try again.', 'error');
     }
+}
+
+function showVotingActive(response) {
+    const resultsContainer = document.getElementById('resultsContainer');
+    const endTime = response.voting_ends_at ? formatDateTime(response.voting_ends_at) : 'Unknown';
+    
+    resultsContainer.innerHTML = `
+        <div class="voting-active" style="text-align: center; padding: 40px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; margin: 20px 0;">
+            <div style="font-size: 3rem; margin-bottom: 20px;">
+                <i class="fas fa-vote-yea"></i>
+            </div>
+            <h3 style="margin-bottom: 15px; font-size: 1.5rem;">🗳️ Voting in Progress</h3>
+            <p style="margin-bottom: 25px; font-size: 1.1rem; opacity: 0.9;">${response.message}</p>
+            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                <p style="margin: 5px 0;"><strong>Ballot:</strong> ${response.ballot_title}</p>
+                <p style="margin: 5px 0;"><strong>Voting ends:</strong> ${endTime}</p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">Active</span></p>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-shield-alt" style="font-size: 1.2rem; color: #28a745;"></i>
+                    <div style="text-align: left;">
+                        <strong>Election Integrity Protection</strong>
+                        <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.95rem;">Results are hidden during voting to prevent voter influence and maintain election security. Results will be displayed automatically when voting closes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function showNoResults() {

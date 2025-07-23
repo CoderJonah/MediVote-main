@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Results API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Debug Results API</h1>
+    
+    <button onclick="testBallotsAPI()">Test Ballots API</button>
+    <button onclick="testResultsAPI()">Test Results API</button>
+    <button onclick="testFrontendCode()">Test Frontend Results Code</button>
+    <button onclick="clearResults()">Clear</button>
+    
+    <div id="output"></div>
+    
+    <script src="js/api.js?v=1.1"></script>
+    <script src="js/main.js?v=1.1"></script>
+    <script src="js/results.js?v=1.1"></script>
+    
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = typeof message === 'object' ? '<pre>' + JSON.stringify(message, null, 2) + '</pre>' : message;
+            output.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('output').innerHTML = '';
+        }
+        
+        async function testBallotsAPI() {
+            log('Testing Ballots API...');
+            try {
+                const response = await fetch('http://localhost:8001/api/voting/ballots');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                log('✅ Ballots API Response:', 'success');
+                log(data);
+            } catch (error) {
+                log('❌ Ballots API Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testResultsAPI() {
+            log('Testing Results API...');
+            try {
+                const response = await fetch('http://localhost:8001/api/admin/results?ballot_id=ballot_000001');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                log('✅ Results API Response:', 'success');
+                log(data);
+                
+                // Test the specific data that frontend should display
+                log('Frontend Display Data:');
+                log(`Total Votes: ${data.total_votes}`);
+                data.results.forEach(result => {
+                    log(`${result.candidate_name}: ${result.vote_count} votes (${result.percentage}%)`);
+                });
+            } catch (error) {
+                log('❌ Results API Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testFrontendCode() {
+            log('Testing Frontend Results Code...');
+            try {
+                // Test if MediVoteAPI is available
+                if (typeof MediVoteAPI === 'undefined') {
+                    log('❌ MediVoteAPI is not defined', 'error');
+                    return;
+                }
+                log('✅ MediVoteAPI is available');
+                
+                // Test the actual frontend API call
+                const response = await MediVoteAPI.get('/api/admin/results?ballot_id=ballot_000001');
+                log('✅ Frontend API Response:', 'success');
+                log(response);
+                
+                // Test displayResults function
+                if (typeof displayResults === 'function') {
+                    log('✅ displayResults function is available');
+                    
+                    // Create a mock container
+                    const mockContainer = document.createElement('div');
+                    mockContainer.id = 'resultsContainer';
+                    document.body.appendChild(mockContainer);
+                    
+                    // Try to call displayResults
+                    displayResults(response);
+                    log('✅ displayResults executed successfully');
+                    log('Generated HTML:', 'success');
+                    log(mockContainer.innerHTML);
+                } else {
+                    log('❌ displayResults function not found', 'error');
+                }
+                
+            } catch (error) {
+                log('❌ Frontend Code Error: ' + error.message, 'error');
+                console.error('Frontend test error:', error);
+            }
+        }
+        
+        // Auto-run tests on load
+        setTimeout(() => {
+            log('=== Auto-running API tests ===');
+            testBallotsAPI();
+            setTimeout(testResultsAPI, 1000);
+            setTimeout(testFrontendCode, 2000);
+        }, 500);
+    </script>
+</body>
+</html> 

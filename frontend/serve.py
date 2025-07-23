@@ -91,11 +91,11 @@ def main():
     with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
         logger.info(f"MediVote Frontend Server starting on port {PORT}")
         logger.info(f"Frontend URL: http://localhost:{PORT}")
-        logger.info(f"Backend API: http://localhost:8000")
+        logger.info(f"Backend API: http://localhost:8001")
         print(f"MediVote Frontend Server starting on port {PORT}")
         print(f"Frontend URL: http://localhost:{PORT}")
-        print(f"Backend API: http://localhost:8000")
-        print(f"API Docs: http://localhost:8000/docs")
+        print(f"Backend API: http://localhost:8001")
+        print(f"API Docs: http://localhost:8001/docs")
         print("\nPress Ctrl+C to stop the server")
         
         # Open browser
