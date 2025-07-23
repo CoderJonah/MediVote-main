@@ -179,20 +179,34 @@ class AuditLog(Base):
         encryption_key: bytes = None
     ) -> 'AuditLog':
         """
-        🏭 FACTORY METHOD: Create audit log with automatic encryption
+        🏭 FACTORY METHOD: Create audit log with INTEGRATED KEY MANAGEMENT
         
-        This method ensures all sensitive data is encrypted before storage
-        and provides a clean interface for creating audit logs.
+        SECURITY ENHANCEMENT: Now integrates with MediVote key management system
+        - Automatically retrieves encryption key from secure key manager
+        - Falls back to provided key for backward compatibility
+        - Ensures all sensitive data is encrypted before storage
+        - Provides a clean interface for creating audit logs
         
         Args:
             event_type: Type of security event (unencrypted for filtering)
             message: Human-readable message (unencrypted for alerting)
             severity: Event severity level (unencrypted for alerting)
-            encryption_key: 32-byte key for encrypting sensitive fields
+            encryption_key: Optional 32-byte key (uses key manager if None)
             ... other fields: All sensitive data that will be encrypted
         """
         from cryptography.fernet import Fernet
         import base64
+        
+        # 🔐 INTEGRATED KEY MANAGEMENT
+        if encryption_key is None:
+            try:
+                # Get encryption key from key management system
+                from backend.core.key_integration import get_audit_encryption_key
+                encryption_key = get_audit_encryption_key()
+                logger.debug("🔑 Using audit encryption key from key management system")
+            except Exception as e:
+                logger.error(f"❌ Failed to get audit encryption key from key manager: {e}")
+                raise ValueError("SECURITY ERROR: No audit encryption key available - initialize key management system first")
         
         if not encryption_key or len(encryption_key) != 32:
             raise ValueError("🚨 SECURITY ERROR: Valid encryption key required for audit logging")
@@ -245,21 +259,35 @@ class AuditLog(Base):
             encryption_version="2.0"
         )
     
-    def decrypt_audit_data(self, encryption_key: bytes) -> Dict[str, Any]:
+    def decrypt_audit_data(self, encryption_key: bytes = None) -> Dict[str, Any]:
         """
-        🔓 SECURE DECRYPTION: Decrypt audit data for authorized access
+        🔓 SECURE DECRYPTION: Decrypt audit data with INTEGRATED KEY MANAGEMENT
         
-        This method should only be called by authorized administrators
-        and the access itself should be logged for accountability.
+        SECURITY ENHANCEMENT: Now integrates with MediVote key management system
+        - Automatically retrieves encryption key from secure key manager if not provided
+        - Falls back to provided key for backward compatibility
+        - This method should only be called by authorized administrators
+        - The access itself should be logged for accountability
         
         Args:
-            encryption_key: 32-byte key for decrypting sensitive fields
+            encryption_key: Optional 32-byte key (uses key manager if None)
             
         Returns:
             Dictionary with decrypted audit data
         """
         from cryptography.fernet import Fernet
         import base64
+        
+        # 🔐 INTEGRATED KEY MANAGEMENT
+        if encryption_key is None:
+            try:
+                # Get encryption key from key management system
+                from backend.core.key_integration import get_audit_encryption_key
+                encryption_key = get_audit_encryption_key()
+                logger.debug("🔑 Using audit encryption key from key management system for decryption")
+            except Exception as e:
+                logger.error(f"❌ Failed to get audit encryption key from key manager: {e}")
+                raise ValueError("SECURITY ERROR: No audit encryption key available - initialize key management system first")
         
         if not encryption_key or len(encryption_key) != 32:
             raise ValueError("🚨 SECURITY ERROR: Valid encryption key required for audit decryption")

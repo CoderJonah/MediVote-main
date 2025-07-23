@@ -563,9 +563,11 @@ class AuthenticationService:
         severity: str = "INFO"
     ):
         """
-        🔐 ENHANCED SECURITY EVENT LOGGING with FULL ENCRYPTION
+        🔐 ENHANCED SECURITY EVENT LOGGING with INTEGRATED KEY MANAGEMENT
         
-        CRITICAL SECURITY UPGRADE: All sensitive audit data is now encrypted
+        SECURITY UPGRADE: Now uses integrated key management system
+        - Automatically retrieves encryption keys from secure key manager
+        - All sensitive audit data is encrypted using centralized key management
         - IP addresses encrypted to prevent location tracking and correlation
         - Session IDs encrypted to prevent session hijacking attempts
         - User agents encrypted to prevent device fingerprinting
@@ -586,20 +588,12 @@ class AuthenticationService:
             # Calculate risk score using existing logic
             risk_score = SecurityUtils.calculate_risk_score(event_type, metadata or {})
             
-            # Get database encryption key for audit logging
-            # ⚠️  IMPROVEMENT NEEDED: This should come from secure key management
-            # For now, we'll use a derived key from the database instance
-            encryption_key = getattr(self.db, 'encryption_key', None)
+            # 🔐 INTEGRATED KEY MANAGEMENT
+            # No longer need to manually manage encryption keys!
+            # The AuditLog.create_encrypted_audit_log method now automatically
+            # retrieves the encryption key from the key management system
             
-            if not encryption_key:
-                # CRITICAL: Generate a temporary key if none available
-                # 🚨 PRODUCTION WARNING: This should never happen in production
-                logger.critical("🚨 AUDIT ENCRYPTION KEY MISSING - Using emergency key generation")
-                import secrets
-                encryption_key = secrets.token_bytes(32)
-                logger.critical("⚠️  Emergency encryption key generated - audit security may be compromised")
-            
-            # Create encrypted audit log using the new factory method
+            # Create encrypted audit log using the new integrated method
             audit_log = AuditLog.create_encrypted_audit_log(
                 event_type=event_type.value,
                 message=message,
@@ -611,8 +605,8 @@ class AuthenticationService:
                 endpoint=endpoint,
                 method=method,
                 audit_metadata=metadata,
-                risk_score=risk_score,
-                encryption_key=encryption_key
+                risk_score=risk_score
+                # No encryption_key parameter needed - automatically retrieved!
             )
             
             # Store the encrypted audit log
@@ -652,9 +646,10 @@ class AuthenticationService:
         event_type_filter: str = None
     ) -> List[Dict[str, Any]]:
         """
-        🔍 SECURE AUDIT LOG RETRIEVAL for authorized administrators
+        🔍 SECURE AUDIT LOG RETRIEVAL with INTEGRATED KEY MANAGEMENT
         
-        SECURITY CONTROLS:
+        SECURITY ENHANCEMENT: Now uses integrated key management system
+        - Automatically retrieves decryption keys from secure key manager
         - Only authorized administrators can decrypt and view audit logs
         - All audit log access is itself logged for accountability
         - Pagination prevents bulk data extraction
@@ -694,18 +689,16 @@ class AuthenticationService:
             # Get the most recent logs
             audit_logs = query.order_by(AuditLog.timestamp.desc()).limit(limit).all()
             
+            # 🔐 INTEGRATED KEY MANAGEMENT
             # Decrypt audit logs for authorized viewing
+            # No longer need to manually manage encryption keys!
             decrypted_logs = []
-            encryption_key = getattr(self.db, 'encryption_key', None)
-            
-            if not encryption_key:
-                logger.error("🚨 Cannot decrypt audit logs - encryption key not available")
-                return [{"error": "Decryption key unavailable", "timestamp": datetime.utcnow().isoformat()}]
             
             for audit_log in audit_logs:
                 try:
-                    # Decrypt the audit log data
-                    decrypted_data = audit_log.decrypt_audit_data(encryption_key)
+                    # Decrypt the audit log data using integrated key management
+                    decrypted_data = audit_log.decrypt_audit_data()
+                    # No encryption_key parameter needed - automatically retrieved!
                     decrypted_logs.append(decrypted_data)
                     
                 except Exception as decrypt_error:

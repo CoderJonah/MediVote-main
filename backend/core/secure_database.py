@@ -76,34 +76,45 @@ class VoteRecord:
 class SecureDatabase:
     """Secure database with encryption for all sensitive data"""
     
-    def __init__(self, db_path: str, encryption_key: bytes):
+    def __init__(self, db_path: str, encryption_key: bytes = None):
         """
-        Initialize secure database with MANDATORY encryption
+        Initialize secure database with INTEGRATED KEY MANAGEMENT
         
-        CRITICAL SECURITY NOTE: Both parameters are MANDATORY because:
-        1. db_path must be explicitly specified to prevent accidental database locations
-        2. encryption_key is REQUIRED for voter data protection - never store in code
-        3. All voter data must be encrypted at rest to prevent data breaches
-        4. Vote records contain sensitive encrypted ballot data that needs double encryption
-        5. Admin sessions and audit logs contain authentication tokens and IP addresses
-        6. Database files could be accessed by unauthorized processes or copied
-        7. Regulatory compliance requires encrypted storage of all PII and voting data
+        SECURITY ENHANCEMENT: Now integrates with MediVote key management system
+        - Automatically retrieves encryption key from secure key manager
+        - Falls back to provided key for backward compatibility
+        - All voter data encrypted at rest to prevent data breaches
+        - Vote records contain sensitive encrypted ballot data that needs double encryption
+        - Admin sessions and audit logs contain authentication tokens and IP addresses
+        - Database files could be accessed by unauthorized processes or copied
+        - Regulatory compliance requires encrypted storage of all PII and voting data
         
         Args:
             db_path: Path to SQLite database file (REQUIRED)
-            encryption_key: 32-byte encryption key (REQUIRED) - never store in code
+            encryption_key: Optional 32-byte encryption key (uses key manager if None)
         
         Raises:
-            ValueError: If encryption_key is None or invalid length
+            ValueError: If neither encryption key nor key manager is available
         """
-        if encryption_key is None:
-            raise ValueError("SECURITY ERROR: Database encryption key is mandatory for voter data protection")
-        
-        if not isinstance(encryption_key, bytes) or len(encryption_key) != 32:
-            raise ValueError("SECURITY ERROR: Encryption key must be exactly 32 bytes")
-        
         self.db_path = Path(db_path)
-        self.encryption_key = encryption_key
+        
+        # 🔐 INTEGRATED KEY MANAGEMENT
+        if encryption_key is None:
+            try:
+                # Get encryption key from key management system
+                from .key_integration import get_database_encryption_key
+                self.encryption_key = get_database_encryption_key()
+                logger.critical("🔑 Using database encryption key from key management system")
+            except Exception as e:
+                logger.error(f"❌ Failed to get encryption key from key manager: {e}")
+                raise ValueError("SECURITY ERROR: No encryption key available - initialize key management system first")
+        else:
+            # Use provided key (backward compatibility)
+            if not isinstance(encryption_key, bytes) or len(encryption_key) != 32:
+                raise ValueError("SECURITY ERROR: Encryption key must be exactly 32 bytes")
+            self.encryption_key = encryption_key
+            logger.warning("⚠️  Using manually provided encryption key - key management system recommended")
+        
         self.fernet = Fernet(base64.urlsafe_b64encode(self.encryption_key))
         
         # Ensure database directory exists with proper permissions
@@ -115,7 +126,7 @@ class SecureDatabase:
         logger.critical(f"🔐 SECURE DATABASE INITIALIZED: {self.db_path}")
         logger.critical(f"   📊 All data encrypted with AES-256")
         logger.critical(f"   🛡️ File permissions: Owner only (700)")
-        logger.critical(f"   ⚠️  Key management: External key required")
+        logger.critical(f"   🔑 Key management: {'Integrated' if encryption_key is None else 'Manual'}")
     
     def _generate_database_key(self) -> bytes:
         """Generate or load database encryption key"""
