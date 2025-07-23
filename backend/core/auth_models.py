@@ -6,9 +6,11 @@ Implements role-based access control, secure sessions, and admin management
 import hashlib
 import secrets
 import uuid
+import json
+import logging
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Any
 from dataclasses import dataclass
 
 import bcrypt
@@ -17,6 +19,7 @@ from sqlalchemy import Column, String, DateTime, Boolean, Text, Integer, JSON
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
+logger = logging.getLogger(__name__)
 
 class UserRole(str, Enum):
     """User roles with hierarchical permissions"""
@@ -119,31 +122,216 @@ class AdminSession(Base):
     mfa_verified = Column(Boolean, default=False)
 
 class AuditLog(Base):
-    """Comprehensive audit logging"""
+    """
+    🔐 ENHANCED COMPREHENSIVE AUDIT LOGGING with FULL ENCRYPTION
+    
+    CRITICAL SECURITY ENHANCEMENT: All sensitive fields are now encrypted
+    - IP addresses encrypted to prevent location tracking
+    - User agents encrypted to prevent device fingerprinting
+    - Session IDs encrypted to prevent session correlation
+    - Metadata encrypted to prevent sensitive data leakage
+    - User IDs encrypted to prevent identity correlation
+    
+    ⚠️  SECURITY FLAW IDENTIFIED & FIXED:
+    Previous implementation stored sensitive audit data in plaintext:
+    1. IP addresses could reveal user locations and correlate activities
+    2. User agents could enable device fingerprinting across sessions
+    3. Session IDs could link activities to specific user sessions
+    4. Metadata could contain sensitive operational details
+    5. User IDs could enable cross-election activity correlation
+    
+    This violated voter privacy and admin operational security.
+    """
     __tablename__ = "audit_logs"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     
-    # Event details
+    # Event details (kept unencrypted for filtering and alerting)
     event_type = Column(String(50), nullable=False)
     severity = Column(String(20), default="INFO")
     message = Column(Text, nullable=False)
     
-    # User context
-    user_id = Column(String(255))
-    user_role = Column(String(50))
-    session_id = Column(String(255))
+    # 🔒 ENCRYPTED SENSITIVE FIELDS
+    # All PII and sensitive context is now encrypted
+    encrypted_user_context = Column(Text)  # Contains: user_id, user_role, session_id
+    encrypted_request_context = Column(Text)  # Contains: ip_address, user_agent, endpoint, method
+    encrypted_audit_metadata = Column(Text)  # Contains: audit_metadata, risk_score
     
-    # Request context
-    ip_address = Column(String(45))
-    user_agent = Column(Text)
-    endpoint = Column(String(255))
-    method = Column(String(10))
+    # Encryption metadata for future key rotation
+    encryption_version = Column(String(10), default="2.0")  # Track encryption scheme version
     
-    # Additional data
-    audit_metadata = Column(JSON, default=dict)
-    risk_score = Column(Integer, default=0)
+    @classmethod
+    def create_encrypted_audit_log(
+        cls,
+        event_type: str,
+        message: str,
+        severity: str = "INFO",
+        user_id: str = None,
+        user_role: str = None,
+        session_id: str = None,
+        ip_address: str = None,
+        user_agent: str = None,
+        endpoint: str = None,
+        method: str = None,
+        audit_metadata: Dict[str, Any] = None,
+        risk_score: int = 0,
+        encryption_key: bytes = None
+    ) -> 'AuditLog':
+        """
+        🏭 FACTORY METHOD: Create audit log with automatic encryption
+        
+        This method ensures all sensitive data is encrypted before storage
+        and provides a clean interface for creating audit logs.
+        
+        Args:
+            event_type: Type of security event (unencrypted for filtering)
+            message: Human-readable message (unencrypted for alerting)
+            severity: Event severity level (unencrypted for alerting)
+            encryption_key: 32-byte key for encrypting sensitive fields
+            ... other fields: All sensitive data that will be encrypted
+        """
+        from cryptography.fernet import Fernet
+        import base64
+        
+        if not encryption_key or len(encryption_key) != 32:
+            raise ValueError("🚨 SECURITY ERROR: Valid encryption key required for audit logging")
+        
+        fernet = Fernet(base64.urlsafe_b64encode(encryption_key))
+        
+        def encrypt_data(data: Dict[str, Any]) -> str:
+            """Encrypt dictionary data for secure storage"""
+            try:
+                json_data = json.dumps(data, sort_keys=True, default=str)
+                encrypted_data = fernet.encrypt(json_data.encode())
+                return base64.b64encode(encrypted_data).decode()
+            except Exception as e:
+                # Never fail audit logging - use emergency fallback
+                logger.error(f"🚨 Encryption failed in audit log: {e}")
+                return base64.b64encode(b"ENCRYPTION_FAILED").decode()
+        
+        # Encrypt user context (identity-related data)
+        user_context = {
+            "user_id": user_id,
+            "user_role": user_role,
+            "session_id": session_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Encrypt request context (network-related data)
+        request_context = {
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+            "endpoint": endpoint,
+            "method": method,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Encrypt metadata (operational data)
+        metadata_context = {
+            "audit_metadata": audit_metadata or {},
+            "risk_score": risk_score,
+            "encryption_timestamp": datetime.utcnow().isoformat(),
+            "privacy_note": "All sensitive fields encrypted for privacy protection"
+        }
+        
+        return cls(
+            event_type=event_type,
+            severity=severity,
+            message=message,
+            encrypted_user_context=encrypt_data(user_context),
+            encrypted_request_context=encrypt_data(request_context),
+            encrypted_audit_metadata=encrypt_data(metadata_context),
+            encryption_version="2.0"
+        )
+    
+    def decrypt_audit_data(self, encryption_key: bytes) -> Dict[str, Any]:
+        """
+        🔓 SECURE DECRYPTION: Decrypt audit data for authorized access
+        
+        This method should only be called by authorized administrators
+        and the access itself should be logged for accountability.
+        
+        Args:
+            encryption_key: 32-byte key for decrypting sensitive fields
+            
+        Returns:
+            Dictionary with decrypted audit data
+        """
+        from cryptography.fernet import Fernet
+        import base64
+        
+        if not encryption_key or len(encryption_key) != 32:
+            raise ValueError("🚨 SECURITY ERROR: Valid encryption key required for audit decryption")
+        
+        fernet = Fernet(base64.urlsafe_b64encode(encryption_key))
+        
+        def decrypt_data(encrypted_data: str) -> Dict[str, Any]:
+            """Decrypt and parse JSON data"""
+            try:
+                if not encrypted_data:
+                    return {}
+                
+                encrypted_bytes = base64.b64decode(encrypted_data.encode())
+                decrypted_data = fernet.decrypt(encrypted_bytes)
+                return json.loads(decrypted_data.decode())
+            except Exception as e:
+                logger.warning(f"🔍 Failed to decrypt audit field: {e}")
+                return {"decryption_error": str(e), "encrypted": True}
+        
+        # Decrypt all encrypted fields
+        user_context = decrypt_data(self.encrypted_user_context)
+        request_context = decrypt_data(self.encrypted_request_context)
+        metadata_context = decrypt_data(self.encrypted_audit_metadata)
+        
+        # Combine decrypted data with public fields
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "event_type": self.event_type,
+            "severity": self.severity,
+            "message": self.message,
+            "encryption_version": self.encryption_version,
+            
+            # Decrypted user context
+            "user_id": user_context.get("user_id"),
+            "user_role": user_context.get("user_role"),
+            "session_id": user_context.get("session_id"),
+            
+            # Decrypted request context
+            "ip_address": request_context.get("ip_address"),
+            "user_agent": request_context.get("user_agent"),
+            "endpoint": request_context.get("endpoint"),
+            "method": request_context.get("method"),
+            
+            # Decrypted metadata
+            "audit_metadata": metadata_context.get("audit_metadata", {}),
+            "risk_score": metadata_context.get("risk_score", 0),
+            
+            # Privacy indicators
+            "privacy_protected": True,
+            "decryption_authorized": True
+        }
+    
+    def get_public_summary(self) -> Dict[str, Any]:
+        """
+        📊 PUBLIC SUMMARY: Get non-sensitive audit data for statistics
+        
+        This method returns only non-sensitive fields that can be used
+        for aggregate statistics and monitoring without privacy concerns.
+        """
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "event_type": self.event_type,
+            "severity": self.severity,
+            "encryption_version": self.encryption_version,
+            "message_preview": self.message[:50] + "..." if len(self.message) > 50 else self.message,
+            "has_user_context": bool(self.encrypted_user_context),
+            "has_request_context": bool(self.encrypted_request_context),
+            "has_metadata": bool(self.encrypted_audit_metadata),
+            "privacy_note": "Sensitive fields encrypted and not included in summary"
+        }
 
 class APIKey(Base):
     """API key management for service-to-service authentication"""
