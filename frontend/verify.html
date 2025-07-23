@@ -17,11 +17,12 @@
             </div>
             <nav class="nav">
                 <a href="index.html" class="nav-link">Home</a>
-                <a href="register.html" class="nav-link">Register</a>
+
                 <a href="vote.html" class="nav-link">Vote</a>
                 <a href="verify.html" class="nav-link active">Verify</a>
                 <a href="results.html" class="nav-link">Results</a>
-                <a href="admin.html" class="nav-link">Admin</a>
+                <a href="voter-auth.html" class="nav-link">Account</a>
+                <a href="admin.html" class="nav-link admin-only" style="display: none;">Admin</a>
             </nav>
         </div>
     </header>
@@ -34,10 +35,24 @@
             </h1>
 
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
+                <i class="fas fa-user-secret"></i>
                 <div>
-                    <strong>Vote Verification:</strong> Use your receipt ID and verification code to confirm 
-                    your vote was recorded correctly on the blockchain. This ensures end-to-end verifiability.
+                    <strong>Anonymous Vote Verification:</strong> Your vote choice is encrypted and completely anonymous. 
+                    Only YOU can see what you voted for using your receipt ID and verification code. 
+                    This ensures maximum privacy while maintaining end-to-end verifiability.
+                </div>
+            </div>
+            
+            <div class="alert alert-success">
+                <i class="fas fa-shield-alt"></i>
+                <div>
+                    <strong>Privacy Guaranteed:</strong>
+                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                        <li>🤐 Administrators cannot see your vote choice</li>
+                        <li>🔒 Vote choices are encrypted anonymously</li>
+                        <li>🎫 Only your receipt can reveal your choice</li>
+                        <li>⛓️ Vote integrity verified on blockchain</li>
+                    </ul>
                 </div>
             </div>
 

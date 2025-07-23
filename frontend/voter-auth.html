@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediVote - Voter Registration & Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .auth-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .auth-tabs {
+            display: flex;
+            border-bottom: 2px solid #f0f0f0;
+            margin-bottom: 2rem;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .auth-tab.active {
+            background: #007bff;
+            color: white;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .required {
+            color: #dc3545;
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 0.75rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-primary:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .alert {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .alert.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .voter-info {
+            background: #e3f2fd;
+            padding: 1.5rem;
+            border-radius: 4px;
+            border-left: 4px solid #2196f3;
+            margin-bottom: 1.5rem;
+        }
+        
+        .voter-info h3 {
+            margin: 0 0 1rem 0;
+            color: #1565c0;
+        }
+        
+        .credential-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .credential-item:last-child {
+            border-bottom: none;
+        }
+        
+        .credential-label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .credential-value {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+        
+        .copy-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html">🏥 MediVote</a>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="vote.html">Vote</a>
+                <a href="results.html">Results</a>
+                <a href="verify.html">Verify</a>
+                <a href="voter-auth.html" class="active">Account</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>🔐 Voter Authentication</h1>
+        
+        <div class="auth-container">
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showTab('login')">Login</button>
+                <button class="auth-tab" onclick="showTab('register')">Register</button>
+                <button class="auth-tab" onclick="showTab('account')" id="account-tab" style="display: none;">My Account</button>
+            </div>
+
+            <div id="alert" class="alert"></div>
+
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form active">
+                <h2>🔓 Voter Login</h2>
+                <p>Login to access your voter credentials and cast votes.</p>
+                
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="login-username">Username or Email <span class="required">*</span></label>
+                        <input type="text" id="login-username" name="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="login-password">Password <span class="required">*</span></label>
+                        <input type="password" id="login-password" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary" id="login-btn">
+                        Login
+                    </button>
+                </form>
+            </div>
+
+            <!-- Registration Form -->
+            <div id="register-form" class="auth-form">
+                <h2>📝 Voter Registration</h2>
+                <p>Register to participate in MediVote elections with your encrypted credentials stored securely.</p>
+                
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="reg-username">Username <span class="required">*</span></label>
+                        <input type="text" id="reg-username" name="username" required minlength="3">
+                        <small>Choose a unique username (minimum 3 characters)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reg-email">Email Address <span class="required">*</span></label>
+                        <input type="email" id="reg-email" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-fullname">Full Name <span class="required">*</span></label>
+                        <input type="text" id="reg-fullname" name="full_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-password">Password <span class="required">*</span></label>
+                        <input type="password" id="reg-password" name="password" required minlength="8">
+                        <small>Minimum 8 characters</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-confirm-password">Confirm Password <span class="required">*</span></label>
+                        <input type="password" id="reg-confirm-password" name="confirm_password" required minlength="8">
+                    </div>
+
+                    <!-- Optional fields -->
+                    <h3>Optional Information</h3>
+                    
+                    <div class="form-group">
+                        <label for="reg-phone">Phone Number</label>
+                        <input type="tel" id="reg-phone" name="phone">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-address">Address</label>
+                        <input type="text" id="reg-address" name="address">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-dob">Date of Birth</label>
+                        <input type="date" id="reg-dob" name="date_of_birth">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-id-type">ID Document Type</label>
+                        <input type="text" id="reg-id-type" name="identity_document" placeholder="e.g., Passport, Driver's License">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-id-number">ID Document Number</label>
+                        <input type="text" id="reg-id-number" name="id_number">
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="register-btn">
+                        Register as Voter
+                    </button>
+                </form>
+            </div>
+
+            <!-- Account Information -->
+            <div id="account-form" class="auth-form">
+                <h2>👤 My Voter Account</h2>
+                <div id="voter-info" class="voter-info">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                
+                <button onclick="logout()" class="btn-primary" style="background: #dc3545; margin-top: 1rem;">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        // Global state
+        let currentSession = null;
+        let voterInfo = null;
+
+        // Check for existing session on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkExistingSession();
+        });
+
+        function checkExistingSession() {
+            const sessionId = localStorage.getItem('voter_session_id');
+            const voterData = localStorage.getItem('voter_info');
+            
+            if (sessionId && voterData) {
+                try {
+                    currentSession = sessionId;
+                    voterInfo = JSON.parse(voterData);
+                    showAccountTab();
+                } catch (e) {
+                    console.error('Error parsing stored voter data:', e);
+                    clearSession();
+                }
+            }
+        }
+
+        function showTab(tabName) {
+            // Hide all forms
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected form and activate tab
+            document.getElementById(tabName + '-form').classList.add('active');
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+        }
+
+        function showAccountTab() {
+            document.getElementById('account-tab').style.display = 'block';
+            showTab('account');
+            loadVoterInfo();
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert ${type}`;
+            alert.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        // Registration form handler
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Validate password confirmation
+            if (data.password !== data.confirm_password) {
+                showAlert('Passwords do not match!', 'error');
+                return;
+            }
+            
+            const registerBtn = document.getElementById('register-btn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registering...';
+            
+            try {
+                const response = await MediVoteAPI.post('/api/voter/register', data);
+                
+                if (response.status === 'success') {
+                    showAlert('Registration successful! Your Voter DID: ' + response.voter_credentials.voter_did, 'success');
+                    
+                    // Store registration info for display
+                    const registrationInfo = {
+                        voter_id: response.voter_credentials.voter_id,
+                        username: response.voter_credentials.username,
+                        voter_did: response.voter_credentials.voter_did
+                    };
+                    
+                    // Show registration success info
+                    showRegistrationSuccess(registrationInfo);
+                    
+                    // Clear form
+                    e.target.reset();
+                    
+                    // Switch to login tab after 3 seconds
+                    setTimeout(() => {
+                        showTab('login');
+                    }, 3000);
+                } else {
+                    showAlert('Registration failed: ' + (response.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAlert('Registration failed: ' + error.message, 'error');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Register as Voter';
+            }
+        });
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            const loginBtn = document.getElementById('login-btn');
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            
+            try {
+                const response = await MediVoteAPI.post('/api/voter/login', data);
+                
+                if (response.status === 'success') {
+                    // Store session information
+                    currentSession = response.session_id;
+                    voterInfo = response.voter_info;
+                    
+                    localStorage.setItem('voter_session_id', currentSession);
+                    localStorage.setItem('voter_info', JSON.stringify(voterInfo));
+                    
+                    showAlert('Login successful! Welcome, ' + voterInfo.full_name, 'success');
+                    
+                    // Clear form
+                    e.target.reset();
+                    
+                    // Show account tab
+                    setTimeout(() => {
+                        showAccountTab();
+                    }, 1000);
+                } else {
+                    showAlert('Login failed: ' + (response.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('Login failed: ' + error.message, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        });
+
+        function showRegistrationSuccess(info) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.innerHTML = `
+                <h4>🎉 Registration Successful!</h4>
+                <p><strong>⚠️ IMPORTANT:</strong> Save these credentials securely!</p>
+                <div class="credential-item">
+                    <span class="credential-label">Voter ID:</span>
+                    <div>
+                        <span class="credential-value">${info.voter_id}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${info.voter_id}')">Copy</button>
+                    </div>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">Username:</span>
+                    <div>
+                        <span class="credential-value">${info.username}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${info.username}')">Copy</button>
+                    </div>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">Voter DID:</span>
+                    <div>
+                        <span class="credential-value">${info.voter_did}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${info.voter_did}')">Copy</button>
+                    </div>
+                </div>
+                <p><small>Your credentials are encrypted and stored securely. Use your username/email and password to login.</small></p>
+            `;
+            alertDiv.className = 'alert success';
+            alertDiv.style.display = 'block';
+        }
+
+        function loadVoterInfo() {
+            if (!voterInfo) return;
+            
+            const voterInfoDiv = document.getElementById('voter-info');
+            voterInfoDiv.innerHTML = `
+                <h3>Welcome, ${voterInfo.full_name}!</h3>
+                <div class="credential-item">
+                    <span class="credential-label">Username:</span>
+                    <div>
+                        <span class="credential-value">${voterInfo.username}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${voterInfo.username}')">Copy</button>
+                    </div>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">Voter ID:</span>
+                    <div>
+                        <span class="credential-value">${voterInfo.voter_id}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${voterInfo.voter_id}')">Copy</button>
+                    </div>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">Voter DID:</span>
+                    <div>
+                        <span class="credential-value">${voterInfo.voter_did}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${voterInfo.voter_did}')">Copy</button>
+                    </div>
+                </div>
+                <p><small>Your voter credentials are securely encrypted and stored. You can now participate in elections!</small></p>
+            `;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('Copied to clipboard!', 'success');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                showAlert('Failed to copy to clipboard', 'error');
+            });
+        }
+
+        function logout() {
+            if (currentSession) {
+                // Call logout endpoint
+                MediVoteAPI.post('/api/voter/logout', { session_id: currentSession })
+                    .then(() => {
+                        clearSession();
+                        showAlert('Logged out successfully', 'success');
+                        showTab('login');
+                    })
+                    .catch(error => {
+                        console.error('Logout error:', error);
+                        clearSession(); // Clear anyway
+                        showAlert('Logged out (with errors)', 'error');
+                        showTab('login');
+                    });
+            } else {
+                clearSession();
+                showTab('login');
+            }
+        }
+
+        function clearSession() {
+            currentSession = null;
+            voterInfo = null;
+            localStorage.removeItem('voter_session_id');
+            localStorage.removeItem('voter_info');
+            document.getElementById('account-tab').style.display = 'none';
+        }
+
+        // Check if user is logged in for voting
+        function isLoggedIn() {
+            return currentSession !== null;
+        }
+
+        function getSessionId() {
+            return currentSession;
+        }
+
+        function getVoterInfo() {
+            return voterInfo;
+        }
+
+        // Expose functions globally for other pages
+        window.VoterAuth = {
+            isLoggedIn,
+            getSessionId,
+            getVoterInfo,
+            checkExistingSession
+        };
+    </script>
+</body>
+</html> 

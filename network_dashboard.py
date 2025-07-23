@@ -134,6 +134,7 @@ class MediVoteNetworkDashboard:
         self.app.router.add_get('/api/nodes', self._nodes_handler)
         self.app.router.add_get('/api/elections', self._elections_handler)
         self.app.router.add_get('/api/network', self._network_handler)
+        self.app.router.add_post('/shutdown', self._shutdown_handler)
         
         # Setup static files if directory exists
         static_dir = Path("static")
@@ -657,6 +658,46 @@ document.addEventListener('DOMContentLoaded', () => {
         except Exception as e:
             logger.error(f"Network handler error: {e}")
             return web.json_response({"error": str(e)}, status=500)
+    
+    async def _shutdown_handler(self, request):
+        """Handle graceful shutdown requests"""
+        try:
+            # Security: Only allow shutdown from localhost (service manager)
+            client_ip = request.remote
+            if client_ip not in ["127.0.0.1", "localhost", "::1"]:
+                logger.warning(f"Unauthorized shutdown attempt from {client_ip}")
+                return web.json_response({"error": "Unauthorized"}, status=403)
+            
+            logger.info("Shutdown request received via HTTP endpoint")
+            
+            # Immediate response to confirm shutdown initiation
+            response_data = {
+                "message": "Network dashboard graceful shutdown initiated",
+                "status": "shutting_down",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            # Send response immediately
+            response = web.json_response(response_data, status=200)
+            
+            # Schedule shutdown after response is sent
+            async def delayed_shutdown():
+                await asyncio.sleep(0.3)  # Brief delay to ensure response is sent
+                logger.info("Executing graceful shutdown...")
+                self.is_running = False
+                # Signal shutdown
+                import os
+                import signal
+                os.kill(os.getpid(), signal.SIGTERM)
+            
+            # Schedule shutdown
+            asyncio.create_task(delayed_shutdown())
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Shutdown handler error: {e}")
+            return web.json_response({"error": "Shutdown failed", "details": str(e)}, status=500)
     
     async def _update_stats(self):
         """Update dashboard statistics"""

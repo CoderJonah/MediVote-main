@@ -1,12 +1,99 @@
 // Voting JavaScript
 // Handles ballot display and vote casting with cryptographic security
+// Requires voter registration and authentication
 
 let availableBallots = [];
 let selectedVotes = {};
+let voterSession = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadAvailableBallots();
+    checkVoterAuthentication();
 });
+
+function checkVoterAuthentication() {
+    // Check if voter is logged in
+    const sessionId = localStorage.getItem('voter_session_id');
+    const voterInfo = localStorage.getItem('voter_info');
+    
+    if (!sessionId || !voterInfo) {
+        showRegistrationRequired();
+        return;
+    }
+    
+    try {
+        voterSession = {
+            sessionId: sessionId,
+            voterInfo: JSON.parse(voterInfo)
+        };
+        
+        showVoterWelcome();
+        loadAvailableBallots();
+    } catch (error) {
+        console.error('Error parsing voter session:', error);
+        showRegistrationRequired();
+    }
+}
+
+function showRegistrationRequired() {
+    const container = document.querySelector('.main .container');
+    container.innerHTML = `
+        <h1 class="text-center mb-4">
+            <i class="fas fa-user-lock"></i>
+            Voter Registration Required
+        </h1>
+        
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>Registration Required:</strong> You must register and login as a voter to participate in elections.
+                This ensures election integrity and prevents unauthorized voting.
+            </div>
+        </div>
+        
+        <div class="text-center" style="margin: 3rem 0;">
+            <h3>🗳️ Why Voter Registration?</h3>
+            <div style="max-width: 600px; margin: 0 auto; text-align: left;">
+                <ul style="padding-left: 2rem; line-height: 1.8;">
+                    <li><strong>🔒 Security:</strong> Your credentials are encrypted and stored securely</li>
+                    <li><strong>🎭 Privacy:</strong> Voter identity is anonymized while maintaining vote integrity</li>
+                    <li><strong>📋 Audit Trail:</strong> Complete audit trail for election transparency</li>
+                    <li><strong>⛓️ Blockchain:</strong> Votes are stored immutably on the blockchain</li>
+                    <li><strong>👥 No Anonymous Voting:</strong> Prevents fraud and duplicate voting</li>
+                </ul>
+            </div>
+            
+            <div style="margin-top: 2rem;">
+                <a href="voter-auth.html" class="btn btn-primary" style="margin: 0.5rem;">
+                    <i class="fas fa-user-plus"></i> Register as Voter
+                </a>
+                <a href="voter-auth.html" class="btn btn-secondary" style="margin: 0.5rem;">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+            </div>
+        </div>
+    `;
+}
+
+function showVoterWelcome() {
+    if (!voterSession) return;
+    
+    // Add welcome message
+    const container = document.querySelector('.main .container');
+    const welcomeDiv = document.createElement('div');
+    welcomeDiv.className = 'alert alert-success';
+    welcomeDiv.innerHTML = `
+        <i class="fas fa-user-check"></i>
+        <div>
+            <strong>Welcome, ${voterSession.voterInfo.full_name}!</strong> 
+            You are logged in as a registered voter. Your vote will be cryptographically secured and stored on the blockchain.
+            <br><small>Voter ID: ${voterSession.voterInfo.voter_id} | DID: ${voterSession.voterInfo.voter_did}</small>
+        </div>
+    `;
+    
+    // Insert after the main heading
+    const heading = container.querySelector('h1');
+    heading.insertAdjacentElement('afterend', welcomeDiv);
+}
 
 async function loadAvailableBallots() {
     const loadingContainer = document.getElementById('loadingContainer');
@@ -120,6 +207,15 @@ function clearSelection(ballotId) {
 }
 
 async function castVote(ballotId) {
+    // Check voter authentication
+    if (!voterSession) {
+        AlertSystem.show('You must be logged in as a voter to cast votes.', 'error');
+        setTimeout(() => {
+            window.location.href = 'voter-auth.html';
+        }, 2000);
+        return;
+    }
+    
     if (!selectedVotes[ballotId]) {
         AlertSystem.show('Please select a candidate before voting.', 'warning');
         return;
@@ -130,7 +226,18 @@ async function castVote(ballotId) {
         .find(b => b.id === ballotId)
         ?.candidates.find(c => c.name === selectedVotes[ballotId]);
     
-    if (!confirm(`Are you sure you want to vote for ${selectedCandidate.name}? This action cannot be undone.`)) {
+    const confirmMessage = `🗳️ CAST VOTE CONFIRMATION\n\n` +
+        `Voter: ${voterSession.voterInfo.full_name}\n` +
+        `Ballot: ${availableBallots.find(b => b.id === ballotId)?.title}\n` +
+        `Choice: ${selectedCandidate.name}\n\n` +
+        `This vote will be:\n` +
+        `• Encrypted and stored securely\n` +
+        `• Recorded on the blockchain\n` +
+        `• Auditable and verifiable\n\n` +
+        `Are you sure you want to cast this vote?\n` +
+        `This action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
         return;
     }
     
@@ -142,32 +249,33 @@ async function castVote(ballotId) {
     voteBtn.disabled = true;
     
     try {
-        // Debug logging
-        console.log('DEBUG: selectedVotes[ballotId]:', selectedVotes[ballotId]);
-        console.log('DEBUG: availableBallots:', availableBallots);
-        console.log('DEBUG: selectedCandidate:', selectedCandidate);
-        
-        // Prepare vote data - match backend API format
-        // Ensure choice is always a simple string, never an object
+        // Prepare vote data with voter session
         let choiceValue = selectedVotes[ballotId];
         if (selectedCandidate && selectedCandidate.name) {
             choiceValue = selectedCandidate.name;
         }
-        // If choiceValue is somehow an object, extract the name or candidate_name
+        // If choiceValue is somehow an object, extract the name
         if (typeof choiceValue === 'object' && choiceValue !== null) {
             choiceValue = choiceValue.candidate_name || choiceValue.name || String(choiceValue);
         }
         
         const voteData = {
             ballot_id: ballotId,
-            choice: String(choiceValue), // Force to string to prevent object serialization
-            voter_id: `frontend_user_${Date.now()}`
+            choice: String(choiceValue),
+            session_id: voterSession.sessionId  // Include session for authentication
         };
         
-        console.log('DEBUG: Final voteData being sent:', voteData);
+        console.log('🗳️ Casting vote as registered voter:', {
+            voter: voterSession.voterInfo.username,
+            voter_did: voterSession.voterInfo.voter_did,
+            ballot: ballotId,
+            choice: choiceValue
+        });
         
-        // Cast vote
-        const response = await MediVoteAPI.post('/api/voting/cast-vote', voteData);
+        // Cast vote with VoterSession header for authentication
+        const response = await MediVoteAPI.post('/api/voting/cast-vote', voteData, {
+            'Authorization': `VoterSession ${voterSession.sessionId}`
+        });
         
         // Show success and receipt
         AlertSystem.clear();

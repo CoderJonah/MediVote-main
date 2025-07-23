@@ -706,36 +706,35 @@ async def list_elections(
         )
     
     try:
-        # TODO: Replace with actual database queries
-        elections = [
-            {
-                "election_id": "election_2024_test",
-                "name": "Test Election 2024",
-                "status": "active",
-                "start_date": "2024-01-15T09:00:00Z",
-                "end_date": "2024-01-22T17:00:00Z",
-                "total_votes": 127,
-                "total_candidates": 3
-            },
-            {
-                "election_id": "election_2024_primary",
-                "name": "Primary Election 2024",
-                "status": "pending",
-                "start_date": "2024-03-01T08:00:00Z",
-                "end_date": "2024-03-01T20:00:00Z",
-                "total_votes": 0,
-                "total_candidates": 5
-            }
-        ]
+        # Use REAL database operations instead of mock data
+        from core.secure_database import get_secure_database
         
-        # Filter by status if specified
-        if status_filter:
-            elections = [e for e in elections if e["status"] == status_filter]
+        db = get_secure_database()
+        elections = db.list_elections(status_filter=status_filter)
+        
+        # Convert to API response format
+        election_list = []
+        for election in elections:
+            election_list.append({
+                "election_id": election.election_id,
+                "name": election.name,
+                "description": election.description,
+                "status": election.status,
+                "start_date": election.start_date,
+                "end_date": election.end_date,
+                "total_votes": election.total_votes,
+                "total_candidates": len(election.candidates),
+                "created_at": election.created_at,
+                "created_by": election.created_by
+            })
+        
+        logger.info(f"📊 Retrieved {len(election_list)} elections from secure database")
         
         return {
-            "total_elections": len(elections),
-            "elections": elections,
-            "filter_applied": status_filter
+            "total_elections": len(election_list),
+            "elections": election_list,
+            "filter_applied": status_filter,
+            "database_secured": True  # Indicate real database is being used
         }
         
     except HTTPException:

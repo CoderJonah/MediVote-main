@@ -82,7 +82,7 @@ class MediVoteBackgroundManager:
         
         # Shutdown throttling to prevent HTTP timeout issues
         self.last_shutdown_time = {}  # Track last shutdown time per service
-        self.shutdown_throttle_delay = 2.0  # Minimum seconds between shutdown requests
+        self.shutdown_throttle_delay = 1.0  # Reduced from 2.0 to 1.0 seconds
         self.bulk_shutdown_mode = False  # Flag to indicate we're doing a bulk shutdown
         
         # Result queue for async operations
@@ -110,16 +110,7 @@ class MediVoteBackgroundManager:
                 "startup_delay": 2,
                 "log_file": "logs/blockchain_node.log"
             },
-            "incentive_system": {
-                "name": "Node Incentive System",
-                "command": ["python", "node_incentive_system.py"],
-                "port": 8082,
-                "dashboard_port": 8095,
-                "auto_restart": True,
-                "auto_recovery_enabled": True,  # Changed to True
-                "startup_delay": 2,
-                "log_file": "logs/incentive_system.log"
-            },
+
             "network_coordinator": {
                 "name": "Network Coordinator",
                 "command": ["python", "network_coordinator.py"],
@@ -176,7 +167,6 @@ class MediVoteBackgroundManager:
             "backend": "WARNING: Shutting down the backend will disable API access.",
             "frontend": "WARNING: Shutting down the frontend will disable web interface access.",
             "blockchain_node": "WARNING: Shutting down blockchain node may affect voting integrity.",
-            "incentive_system": "WARNING: Shutting down the incentive system will stop reward distribution and node reputation tracking.",
             "network_coordinator": "WARNING: Shutting down the coordinator will affect network discovery and node communication.",
             "network_dashboard": "WARNING: Shutting down the dashboard will disable network monitoring."
         }
@@ -242,9 +232,7 @@ class MediVoteBackgroundManager:
                 "enable_http": True,  # Enable HTTP interface
                 "enable_rpc": True,   # Enable RPC interface
                 "register_with_coordinator": True,  # Auto-register with network coordinator
-                "coordinator_url": "http://localhost:8083",  # Network coordinator endpoint
-                "register_with_incentive_system": True,  # Auto-register with incentive system
-                "incentive_system_url": "http://localhost:8082"  # Incentive system endpoint
+                "coordinator_url": "http://localhost:8083"  # Network coordinator endpoint
             },
             "network": {
                 "bootstrap_nodes": ["127.0.0.1:8083"],  # Include network coordinator
@@ -365,7 +353,7 @@ class MediVoteBackgroundManager:
             
             # Method 3: HTTP health check
             http_healthy = False
-            if "port" in config and config["port"] in [8001, 8080, 8082, 8083, 8084]:
+            if "port" in config and config["port"] in [8001, 8080, 8083, 8084]:
                 try:
                     import requests
                     response = requests.get(f"http://localhost:{config['port']}/health", timeout=3)
@@ -502,7 +490,6 @@ class MediVoteBackgroundManager:
         startup_order = [
             "backend",
             "blockchain_node", 
-            "incentive_system",
             "network_coordinator",
             "network_dashboard",
             "frontend"
@@ -977,16 +964,15 @@ class MediVoteBackgroundManager:
             logger.error(f"Unknown service: {service_id}")
             return False
         
-        # Implement shutdown throttling to prevent HTTP timeout issues
+        # Implement lightweight shutdown throttling 
         current_time = time.time()
         if service_id in self.last_shutdown_time:
             time_since_last_shutdown = current_time - self.last_shutdown_time[service_id]
-            # Use different throttling delays based on shutdown mode
-            throttle_delay = self.shutdown_throttle_delay if self.bulk_shutdown_mode else 1.0
+            # Use minimal throttling delay for bulk shutdown
+            throttle_delay = 0.3 if self.bulk_shutdown_mode else 0.5
             if time_since_last_shutdown < throttle_delay:
                 throttle_wait = throttle_delay - time_since_last_shutdown
-                mode_desc = "bulk shutdown" if self.bulk_shutdown_mode else "individual shutdown"
-                logger.info(f"Throttling {mode_desc} request for {service_id}, waiting {throttle_wait:.1f}s to prevent HTTP timeout")
+                logger.debug(f"Brief throttling for {service_id}, waiting {throttle_wait:.1f}s")
                 await asyncio.sleep(throttle_wait)
         
         # Record this shutdown attempt
@@ -1106,44 +1092,90 @@ class MediVoteBackgroundManager:
         # Note: We don't restore auto-recovery here as service is successfully stopped
         return True
     
+    async def _check_service_responsive(self, service_id: str, config: dict) -> bool:
+        """Check if service is actually running and responsive before attempting HTTP shutdown"""
+        if "port" not in config:
+            return False
+        
+        # First check if the process is even running
+        if service_id in self.processes:
+            process = self.processes[service_id]
+            if process.poll() is not None:  # Process has terminated
+                logger.info(f"Service {config['name']} process is not running (PID terminated)")
+                return False
+        
+        # Then check if port is actually listening
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)  # Very quick check
+            result = sock.connect_ex(('localhost', config["port"]))
+            sock.close()
+            
+            if result != 0:  # Port not listening
+                logger.info(f"Service {config['name']} port {config['port']} is not listening")
+                return False
+        except Exception as e:
+            logger.info(f"Service {config['name']} port check failed: {e}")
+            return False
+        
+        # Finally, try a quick HTTP health check (but only if port is listening)
+        try:
+            import requests
+            response = requests.get(f"http://localhost:{config['port']}/status", timeout=1)
+            is_responsive = response.status_code == 200
+            if not is_responsive:
+                logger.info(f"Service {config['name']} HTTP health check failed (status {response.status_code})")
+            return is_responsive
+        except Exception as e:
+            logger.info(f"Service {config['name']} HTTP health check failed: {e}")
+            return False
+    
     async def _try_graceful_shutdown(self, service_id: str, config: dict, process) -> bool:
-        """Try graceful shutdown via HTTP endpoint - TIERED APPROACH"""
+        """Try graceful shutdown via HTTP endpoint - TIERED APPROACH with service health check"""
         
         # 🏗️ TIER 1: Critical Services (HTTP + SIGTERM Fallback)
         # These services have proper /shutdown endpoints and handle state/data
-        tier1_critical_services = ['backend', 'blockchain_node', 'incentive_system', 'network_coordinator']
+        tier1_critical_services = ['backend', 'blockchain_node', 'network_coordinator']
         
-        # 🔧 TIER 2: Simple Services (SIGTERM Only)
-        # These services are stateless or simple file servers
+        # 🔧 TIER 2: Simple Services (HTTP + SIGTERM Fallback)
+        # These services have basic shutdown endpoints
         tier2_simple_services = ['network_dashboard', 'frontend']
         
-        if service_id in tier1_critical_services:
-            logger.info(f"TIER 1: Attempting HTTP graceful shutdown for {config['name']}")
+        if service_id in tier1_critical_services or service_id in tier2_simple_services:
+            # First check if service is actually responsive
+            is_responsive = await self._check_service_responsive(service_id, config)
+            if not is_responsive:
+                logger.info(f"Service {config['name']} is not responsive, skipping HTTP shutdown")
+                return False
+            
+            logger.info(f"TIER 1/2: Attempting HTTP graceful shutdown for {config['name']}")
             try:
                 import requests
-                # Use appropriate timeout for the shutdown request
-                shutdown_wait_timeout = 8 if service_id == 'backend' else 5
-                # Use longer HTTP request timeout for services that need to save state
-                # Increased timeout for queued shutdowns to prevent timeout issues
-                http_request_timeout = 15 if service_id in ['blockchain_node', 'backend'] else 10
+                # Use shorter timeouts for faster shutdown
+                shutdown_wait_timeout = 5 if service_id == 'backend' else 3
+                # Reduced HTTP request timeout for faster shutdown
+                http_request_timeout = 6 if service_id in ['blockchain_node', 'backend'] else 4
                 
-                # Create session with retry logic for better reliability during queued shutdowns
+                # Create session with reasonable retry logic
                 session = requests.Session()
                 
-                # Configure session for reliability
+                # Configure session with minimal but reasonable retries
                 from requests.adapters import HTTPAdapter
                 from urllib3.util.retry import Retry
                 
                 retry_strategy = Retry(
-                    total=2,  # 2 retries
-                    backoff_factor=1,  # Wait 1, 2 seconds between retries
-                    status_forcelist=[429, 500, 502, 503, 504],  # Retry on these status codes
+                    total=1,  # One reasonable retry attempt
+                    connect=1,  # One connection retry
+                    backoff_factor=0.3,  # Short backoff
+                    status_forcelist=[500, 502, 503, 504],  # Only retry on server errors
                 )
                 adapter = HTTPAdapter(max_retries=retry_strategy)
                 session.mount("http://", adapter)
                 
-                logger.info(f"Sending HTTP shutdown request to {config['name']} on port {config['port']}")
-                response = session.post(f"http://localhost:{config['port']}/shutdown", timeout=http_request_timeout)
+                # Use internal shutdown endpoint for backend
+                shutdown_endpoint = "/internal-shutdown" if service_id == 'backend' else "/shutdown"
+                logger.info(f"Sending HTTP shutdown request to {config['name']} on port {config['port']}{shutdown_endpoint}")
+                response = session.post(f"http://localhost:{config['port']}{shutdown_endpoint}", timeout=http_request_timeout)
                 
                 if response.status_code == 200:
                     logger.info(f"SUCCESS: HTTP graceful shutdown signal sent to {config['name']}")
@@ -1166,12 +1198,8 @@ class MediVoteBackgroundManager:
                 logger.warning(f"HTTP shutdown error for {config['name']}: {e}, will fallback to SIGTERM")
                 return False
                 
-        elif service_id in tier2_simple_services:
-            logger.info(f"TIER 2: Skipping HTTP shutdown for {config['name']} - using SIGTERM directly")
-            return False
-            
         else:
-            logger.warning(f"UNKNOWN TIER: Service {service_id} not categorized, skipping HTTP shutdown")
+            logger.info(f"Service {service_id} has no HTTP shutdown endpoint, skipping HTTP shutdown")
             return False
     
     async def _wait_for_termination(self, process, service_name: str, timeout: int = 10) -> bool:
@@ -1318,7 +1346,6 @@ class MediVoteBackgroundManager:
             "frontend",
             "network_dashboard", 
             "network_coordinator",
-            "incentive_system",
             "blockchain_node",
             "backend"
         ]
@@ -1356,9 +1383,8 @@ class MediVoteBackgroundManager:
                 except Exception as e:
                     logger.error(f"Error stopping {service_id}: {e}")
                 
-                # Enhanced delay between stops to prevent HTTP shutdown timeout issues
-                # Give more time between services when doing bulk shutdown
-                await asyncio.sleep(2.0)  # Increased from 0.5s to 2.0s for HTTP requests to complete
+                # Shorter delay between stops for faster shutdown
+                await asyncio.sleep(0.5)  # Reduced from 2.0s to 0.5s for faster shutdown
         
         # Step 4: Final cleanup
         await self._final_cleanup()
@@ -1417,20 +1443,43 @@ class MediVoteBackgroundManager:
         try:
             import psutil
             
-            # Find any remaining MediVote processes
+            # Get list of our managed process PIDs
+            managed_pids = set()
+            for process in self.processes.values():
+                try:
+                    if hasattr(process, 'pid') and process.pid > 0:
+                        managed_pids.add(process.pid)
+                except Exception:
+                    pass
+            
+            # Find any remaining MediVote-related processes
             for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
                 try:
-                    cmdline = proc.info['cmdline']
-                    if cmdline and any('medivote' in arg.lower() or 'python' in arg.lower() for arg in cmdline):
-                        # Check if it's one of our managed processes
-                        if proc.pid not in [p.pid for p in self.processes.values() if p.poll() is None]:
-                            logger.warning(f"Cleaning up orphaned process: {proc.pid}")
+                    cmdline = proc.info.get('cmdline', [])
+                    if not cmdline:
+                        continue
+                        
+                    # Look for MediVote-specific processes
+                    is_medivote_process = any(
+                        'medivote' in str(arg).lower() or 
+                        'blockchain_node.py' in str(arg) or
+                        'network_coordinator.py' in str(arg) or
+                        'network_dashboard.py' in str(arg)
+                        for arg in cmdline
+                    )
+                    
+                    if is_medivote_process and proc.pid not in managed_pids:
+                        logger.info(f"Cleaning up orphaned MediVote process: {proc.pid} ({proc.info.get('name', 'unknown')})")
+                        try:
                             proc.terminate()
-                            try:
-                                proc.wait(timeout=5)
-                            except psutil.TimeoutExpired:
-                                proc.kill()
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            proc.wait(timeout=3)
+                        except psutil.TimeoutExpired:
+                            logger.debug(f"Force killing stubborn process: {proc.pid}")
+                            proc.kill()
+                        except psutil.AccessDenied:
+                            logger.debug(f"Cannot clean up process {proc.pid} (access denied)")
+                            
+                except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError):
                     pass
                     
         except Exception as e:
@@ -2255,7 +2304,6 @@ class MediVoteBackgroundManager:
             const serverPorts = {{
                 'backend': 8001,
                 'blockchain_node': 8546,
-                'incentive_system': 8082,
                 'network_coordinator': 8083,
                 'network_dashboard': 8084,
                 'frontend': 8001  // Frontend server interface should point to backend API
@@ -2289,7 +2337,6 @@ class MediVoteBackgroundManager:
             const dashboardPorts = {{
                 'backend': 8091,
                 'blockchain_node': 8093,
-                'incentive_system': 8095,
                 'network_coordinator': 8096,
                 'frontend': 8098
             }};
@@ -2444,7 +2491,6 @@ class MediVoteBackgroundManager:
             if (isRunning) {{
                 const warnings = {{
                     'blockchain_node': 'WARNING: Shutting down this node will result in loss of credibility points and network participation rewards.',
-                    'incentive_system': 'WARNING: Shutting down the incentive system will stop reward distribution and node reputation tracking.',
                     'network_coordinator': 'WARNING: Shutting down the coordinator will affect network discovery and node communication.',
                     'network_dashboard': 'WARNING: Shutting down the dashboard will disable network monitoring.',
                     'backend': 'WARNING: Shutting down the backend will disable voting functionality and API access.',
@@ -2776,8 +2822,16 @@ async def main():
     
     manager = MediVoteBackgroundManager()
     
-    # Set up signal handlers for graceful shutdown
+    # Set up signal handlers for graceful shutdown (prevent duplicate registration)
+    shutdown_in_progress = False
+    
     def signal_handler(signum, frame):
+        nonlocal shutdown_in_progress
+        if shutdown_in_progress:
+            print("\nShutdown already in progress, please wait...")
+            return
+        
+        shutdown_in_progress = True
         print(f"\nSTOP: Received signal {signum}, initiating graceful shutdown...")
         # Disable auto-recovery for all services to prevent restart during shutdown
         print("Disabling auto-recovery for all services...")
@@ -2786,7 +2840,7 @@ async def main():
         # Mark shutdown as requested
         manager._shutdown_requested = True
     
-    # Register signal handlers
+    # Register signal handlers (only once)
     import signal
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)

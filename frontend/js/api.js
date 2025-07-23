@@ -146,11 +146,18 @@ class MediVoteAPIClient {
     /**
      * POST request
      */
-    async post(endpoint, data = {}) {
-        return this.request(endpoint, {
+    async post(endpoint, data = {}, customHeaders = {}) {
+        const options = {
             method: 'POST',
             body: JSON.stringify(data)
-        });
+        };
+        
+        // Merge custom headers if provided
+        if (Object.keys(customHeaders).length > 0) {
+            options.headers = customHeaders;
+        }
+        
+        return this.request(endpoint, options);
     }
 
     /**

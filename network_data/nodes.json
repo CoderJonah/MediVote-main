@@ -1,12 +1,12 @@
 [
   {
-    "node_id": "node_c3cd88544fda42b8",
+    "node_id": "node_67c8ce9e3e30b5bc",
     "address": "localhost",
     "port": 8545,
     "rpc_port": 8546,
     "node_type": "full_node",
     "version": "1.0.0",
-    "last_seen": "2025-07-23T09:19:33.710665",
+    "last_seen": "2025-07-23T15:11:18.185041",
     "is_active": true,
     "votes_processed": 0,
     "blocks_processed": 0

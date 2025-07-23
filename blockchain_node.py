@@ -106,8 +106,8 @@ class MediVoteBlockchainNode:
                 "max_peers": 50,
                 "sync_interval": 30,
                 "block_time": 15,
-                "register_with_incentive_system": False,
-                "incentive_system_url": "http://localhost:8082"
+
+    
             },
             "network": {
                 "bootstrap_nodes": [
@@ -229,9 +229,31 @@ class MediVoteBlockchainNode:
     
     def _process_new_blocks(self):
         """Process new blocks from the blockchain"""
-        # This would implement actual block processing
-        # For now, we'll simulate the process
-        logger.debug("Processing new blocks...")
+        try:
+            if not self.blockchain_service:
+                return
+            
+            # Mine pending transactions into blocks
+            if self.blockchain_service.blockchain:
+                new_block = self.blockchain_service.blockchain.mine_pending_transactions()
+                if new_block:
+                    self.node_info.blocks_processed += 1
+                    self.node_info.votes_processed += len(new_block.transactions)
+                    logger.info(f"✅ Mined block #{new_block.index} with {len(new_block.transactions)} transactions")
+                    
+                    # Update vote processing statistics
+                    vote_count = 0
+                    for tx in new_block.transactions:
+                        if tx.get("type") == "post_ballot":
+                            vote_count += 1
+                    
+                    if vote_count > 0:
+                        logger.info(f"🗳️  Processed {vote_count} votes into block #{new_block.index}")
+                else:
+                    logger.debug("No pending transactions to mine")
+                    
+        except Exception as e:
+            logger.error(f"Error processing new blocks: {e}")
     
     async def start(self):
         """Start the blockchain node"""
@@ -247,9 +269,7 @@ class MediVoteBlockchainNode:
             # Start RPC server as background task and store reference
             self.rpc_task = asyncio.create_task(self._start_rpc_server())
             
-            # Register with incentive system if configured
-            if self.config.get("node", {}).get("register_with_incentive_system", False):
-                asyncio.create_task(self._register_with_incentive_system())
+            
             
             logger.info("Blockchain node started successfully")
             return True
@@ -392,7 +412,7 @@ class MediVoteBlockchainNode:
             logger.warning("- Loss of accumulated credibility points")
             logger.warning("- Disconnection from the MediVote network")
             logger.warning("- Need to re-establish trust when restarting")
-            logger.warning("- Loss of potential rewards and incentives")
+
             logger.warning("================================")
             
             # Shorter wait to ensure HTTP request doesn't timeout
@@ -491,58 +511,7 @@ class MediVoteBlockchainNode:
             logger.error(f"Error getting election data: {e}")
             return None
 
-    async def _register_with_incentive_system(self):
-        """Register this node with the incentive system"""
-        try:
-            # Wait a moment for the RPC server to be fully ready
-            await asyncio.sleep(3)
-            
-            incentive_url = self.config.get("node", {}).get("incentive_system_url", "http://localhost:8082")
-            
-            # Generate a simple public key for demo purposes
-            public_key = f"pk_{secrets.token_hex(16)}"
-            
-            registration_data = {
-                "node_id": self.node_info.node_id,
-                "public_key": public_key,
-                "node_address": "localhost",
-                "node_port": self.config["node"]["rpc_port"]
-            }
-            
-            logger.info(f"Registering with incentive system at {incentive_url}...")
-            
-            # Make up to 3 attempts to register
-            for attempt in range(3):
-                try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.post(
-                            f"{incentive_url}/api/register-node",
-                            json=registration_data,
-                            timeout=10
-                        ) as response:
-                            
-                            if response.status == 200:
-                                data = await response.json()
-                                logger.info(f"Successfully registered with incentive system: {data.get('message', 'Registered')}")
-                                logger.info(f"Ballot limit: {data.get('ballot_limit', 'N/A')}, Min uptime: {data.get('min_uptime', 'N/A')} hours")
-                                return True
-                            else:
-                                error_data = await response.json()
-                                logger.warning(f"Failed to register with incentive system (attempt {attempt + 1}): {error_data.get('error', 'Unknown error')}")
-                                
-                except Exception as e:
-                    logger.warning(f"Registration attempt {attempt + 1} failed: {e}")
-                
-                # Wait before retry
-                if attempt < 2:
-                    await asyncio.sleep(5)
-            
-            logger.error("Failed to register with incentive system after 3 attempts")
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error registering with incentive system: {e}")
-            return False
+
 
 async def main():
     """Main function to run the blockchain node"""

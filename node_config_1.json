@@ -10,9 +10,7 @@
     "enable_http": true,
     "enable_rpc": true,
     "register_with_coordinator": true,
-    "coordinator_url": "http://localhost:8083",
-    "register_with_incentive_system": true,
-    "incentive_system_url": "http://localhost:8082"
+    "coordinator_url": "http://localhost:8083"
   },
   "network": {
     "bootstrap_nodes": [

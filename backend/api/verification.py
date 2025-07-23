@@ -420,9 +420,62 @@ def _calculate_merkle_root(data_list: List[str]) -> str:
 
 
 def _verify_zero_knowledge_proof(proof: Dict[str, Any], public_inputs: List[str]) -> bool:
-    """Verify a zero-knowledge proof (simplified)"""
-    # In production, this would use the actual ZK verification logic
-    return True
+    """Verify a zero-knowledge proof using REAL zk-SNARK verification"""
+    try:
+        # Import the real ZK verification system
+        from core.crypto.zero_knowledge import create_real_zk_verifier, ZKProof, VerificationKey
+        
+        # Parse the proof data
+        zk_proof = ZKProof(
+            pi_a=(proof.get("pi_a", ["0", "0"])[0], proof.get("pi_a", ["0", "0"])[1]),
+            pi_b=((proof.get("pi_b", [["0", "0"], ["0", "0"]])[0][0], 
+                   proof.get("pi_b", [["0", "0"], ["0", "0"]])[0][1]),
+                  (proof.get("pi_b", [["0", "0"], ["0", "0"]])[1][0], 
+                   proof.get("pi_b", [["0", "0"], ["0", "0"]])[1][1])),
+            pi_c=(proof.get("pi_c", ["0", "0"])[0], proof.get("pi_c", ["0", "0"])[1]),
+            protocol=proof.get("protocol", "groth16"),
+            curve=proof.get("curve", "bn128")
+        )
+        
+        # Get verification key from the proof or load from trusted source
+        vk_data = proof.get("verification_key")
+        if not vk_data:
+            logger.warning("No verification key provided in proof")
+            return False
+        
+        # Create verification key
+        verification_key = VerificationKey(
+            vk_alpha_1=(vk_data.get("vk_alpha_1", ["0", "0"])[0], 
+                       vk_data.get("vk_alpha_1", ["0", "0"])[1]),
+            vk_beta_2=((vk_data.get("vk_beta_2", [["0", "0"], ["0", "0"]])[0][0],
+                       vk_data.get("vk_beta_2", [["0", "0"], ["0", "0"]])[0][1]),
+                      (vk_data.get("vk_beta_2", [["0", "0"], ["0", "0"]])[1][0],
+                       vk_data.get("vk_beta_2", [["0", "0"], ["0", "0"]])[1][1])),
+            vk_gamma_2=((vk_data.get("vk_gamma_2", [["0", "0"], ["0", "0"]])[0][0],
+                        vk_data.get("vk_gamma_2", [["0", "0"], ["0", "0"]])[0][1]),
+                       (vk_data.get("vk_gamma_2", [["0", "0"], ["0", "0"]])[1][0],
+                        vk_data.get("vk_gamma_2", [["0", "0"], ["0", "0"]])[1][1])),
+            vk_delta_2=((vk_data.get("vk_delta_2", [["0", "0"], ["0", "0"]])[0][0],
+                        vk_data.get("vk_delta_2", [["0", "0"], ["0", "0"]])[0][1]),
+                       (vk_data.get("vk_delta_2", [["0", "0"], ["0", "0"]])[1][0],
+                        vk_data.get("vk_delta_2", [["0", "0"], ["0", "0"]])[1][1])),
+            vk_ic=[(ic[0], ic[1]) for ic in vk_data.get("vk_ic", [["0", "0"]])]
+        )
+        
+        # Create verifier and verify proof
+        verifier = create_real_zk_verifier(verification_key)
+        is_valid = verifier.verify_proof(zk_proof, public_inputs)
+        
+        if is_valid:
+            logger.info("✅ Zero-knowledge proof verification successful")
+        else:
+            logger.warning("❌ Zero-knowledge proof verification failed")
+        
+        return is_valid
+        
+    except Exception as e:
+        logger.error(f"Error verifying zero-knowledge proof: {e}")
+        return False
 
 
 def _verify_homomorphic_computation(
