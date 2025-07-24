@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🔐 SECURE KEY MANAGEMENT SYSTEM for MediVote
+SECURE KEY MANAGEMENT SYSTEM for MediVote
 Centralized management of all cryptographic keys with proper security controls
 
 CRITICAL SECURITY FEATURES:
@@ -37,7 +37,11 @@ class KeyType(str, Enum):
     """Types of cryptographic keys managed by the system"""
     DATABASE_ENCRYPTION = "database_encryption"     # AES-256 for database encryption
     AUDIT_LOG_ENCRYPTION = "audit_log_encryption"   # AES-256 for audit log encryption  
-    JWT_SECRET = "jwt_secret"                       # HMAC key for JWT tokens
+    JWT_SECRET = "jwt_secret"                       # DEPRECATED: HMAC key for JWT tokens (legacy only)
+    JWT_RSA_PRIVATE = "jwt_rsa_private"             # RSA private key for JWT signing
+    JWT_RSA_PUBLIC = "jwt_rsa_public"               # RSA public key for JWT verification
+    JWT_ECDSA_PRIVATE = "jwt_ecdsa_private"         # ECDSA private key for JWT signing
+    JWT_ECDSA_PUBLIC = "jwt_ecdsa_public"           # ECDSA public key for JWT verification
     SESSION_ENCRYPTION = "session_encryption"       # AES-256 for session data
     HOMOMORPHIC_MASTER = "homomorphic_master"       # Paillier master key
     HOMOMORPHIC_PUBLIC = "homomorphic_public"       # Paillier public key
@@ -57,21 +61,22 @@ class Environment(str, Enum):
 
 @dataclass
 class KeyMetadata:
-    """Metadata for a cryptographic key"""
-    key_id: str
-    key_type: KeyType
-    environment: Environment
-    created_at: datetime
-    expires_at: Optional[datetime]
-    version: int
-    algorithm: str
-    key_length: int
-    purpose: str
-    rotation_required: bool = False
-    last_used: Optional[datetime] = None
-    usage_count: int = 0
+    """Comprehensive metadata for cryptographic keys"""
+    key_id: str                    # Unique identifier
+    key_type: KeyType             # Type of key (database, JWT, etc.)
+    environment: Environment      # Environment where key is valid
+    created_at: datetime          # Creation timestamp
+    expires_at: Optional[datetime] # Optional expiration
+    version: int                  # Version number for rotation
+    algorithm: str                # Cryptographic algorithm
+    key_length: int               # Key length in bytes
+    purpose: str                  # Human-readable purpose
+    rotation_required: bool = False  # Whether rotation is needed
+    last_used: Optional[datetime] = None  # Last usage timestamp
+    usage_count: int = 0          # Number of times used
     
     def to_dict(self) -> Dict[str, Any]:
+        """Convert metadata to dictionary for serialization"""
         return {
             **asdict(self),
             'created_at': self.created_at.isoformat(),
@@ -80,18 +85,18 @@ class KeyMetadata:
         }
 
 
-@dataclass
+@dataclass 
 class SecureKeyStore:
-    """Secure storage for a cryptographic key with metadata"""
+    """Secure storage container for cryptographic keys"""
     metadata: KeyMetadata
-    encrypted_key_data: str  # Base64 encoded encrypted key
-    verification_hash: str   # SHA-256 hash for integrity verification
+    encrypted_key_data: str       # Base64-encoded encrypted key
+    verification_hash: str        # SHA-256 hash for integrity
     derivation_info: Optional[Dict[str, Any]] = None  # Key derivation parameters
 
 
 class MediVoteKeyManager:
     """
-    🔐 COMPREHENSIVE KEY MANAGEMENT SYSTEM
+    COMPREHENSIVE KEY MANAGEMENT SYSTEM
     
     Manages all cryptographic keys for the MediVote system with enterprise-grade security:
     - Centralized key storage and access control
@@ -125,11 +130,11 @@ class MediVoteKeyManager:
         # Load existing keys
         self._load_existing_keys()
         
-        logger.critical(f"🔐 KEY MANAGER INITIALIZED")
-        logger.critical(f"   🌍 Environment: {environment}")
-        logger.critical(f"   📁 Key Directory: {self.config_dir}")
-        logger.critical(f"   🔑 Keys Loaded: {len(self.key_store)}")
-        logger.critical(f"   ⚠️  Production Security: {'ENABLED' if environment == Environment.PRODUCTION else 'DEVELOPMENT MODE'}")
+        logger.critical(f"KEY MANAGER INITIALIZED")
+        logger.critical(f"   Environment: {environment}")
+        logger.critical(f"   Key Directory: {self.config_dir}")
+        logger.critical(f"   Keys Loaded: {len(self.key_store)}")
+        logger.critical(f"   Production Security: {'ENABLED' if environment == Environment.PRODUCTION else 'DEVELOPMENT MODE'}")
     
     def _initialize_master_key(self):
         """Initialize or load the master key used to encrypt all other keys"""
@@ -144,14 +149,14 @@ class MediVoteKeyManager:
                 if len(self.master_key) != 32:
                     raise ValueError("Invalid master key length") 
                     
-                logger.info("🔑 Loaded existing master key")
+                logger.info("Loaded existing master key")
                 
             except Exception as e:
-                logger.error(f"❌ Failed to load master key: {e}")
+                logger.error(f"Failed to load master key: {e}")
                 if self.environment == Environment.PRODUCTION:
                     raise ValueError("PRODUCTION ERROR: Cannot load master key - system compromised")
                 else:
-                    logger.warning("🚨 Generating new master key for development")
+                    logger.warning("WARNING: Generating new master key for development")
                     self._generate_new_master_key(master_key_file)
         else:
             # Generate new master key
@@ -160,7 +165,7 @@ class MediVoteKeyManager:
     def _generate_new_master_key(self, key_file: Path):
         """Generate a new master key for key encryption"""
         if self.environment == Environment.PRODUCTION:
-            logger.critical("🚨 PRODUCTION SECURITY WARNING:")
+            logger.critical("PRODUCTION SECURITY WARNING:")
             logger.critical("   Master key generation should use Hardware Security Module (HSM)")
             logger.critical("   Current implementation uses software RNG - NOT RECOMMENDED for production")
             logger.critical("   Implement HSM integration before production deployment")
@@ -175,12 +180,12 @@ class MediVoteKeyManager:
         # Set restrictive permissions (owner read-only)
         key_file.chmod(0o600)
         
-        logger.critical(f"🔑 Generated new master key: {key_file}")
-        logger.critical(f"   📊 Key Length: 256 bits")
-        logger.critical(f"   🛡️  File Permissions: 600 (owner read-only)")
+        logger.critical(f"Generated new master key: {key_file}")
+        logger.critical(f"   Key Length: 256 bits")
+        logger.critical(f"   File Permissions: 600 (owner read-only)")
         
         if self.environment != Environment.PRODUCTION:
-            logger.critical(f"   ⚠️  DEVELOPMENT KEY - REGENERATE FOR PRODUCTION")
+            logger.critical(f"   DEVELOPMENT KEY - REGENERATE FOR PRODUCTION")
     
     def generate_key(
         self,
@@ -191,7 +196,7 @@ class MediVoteKeyManager:
         expires_days: Optional[int] = None
     ) -> str:
         """
-        🏭 SECURE KEY GENERATION with comprehensive metadata
+        SECURE KEY GENERATION with comprehensive metadata
         
         Generates a new cryptographic key with proper security controls:
         - Cryptographically secure random generation
@@ -225,8 +230,55 @@ class MediVoteKeyManager:
                 raw_key = secrets.token_bytes(32)
                 
             elif key_type == KeyType.JWT_SECRET:
-                # HMAC key (longer for better security)
+                # DEPRECATED: HMAC key (legacy only - use RSA/ECDSA for new systems)
+                logger.warning("⚠️  SECURITY WARNING: Generating HMAC JWT key (legacy)")
+                logger.warning("   Use JWT_RSA_PRIVATE/JWT_ECDSA_PRIVATE for new systems")
                 raw_key = secrets.token_bytes(64)
+                
+            elif key_type in [KeyType.JWT_RSA_PRIVATE, KeyType.JWT_RSA_PUBLIC]:
+                # RSA keys for JWT signing
+                if key_type == KeyType.JWT_RSA_PRIVATE:
+                    from cryptography.hazmat.primitives.asymmetric import rsa
+                    from cryptography.hazmat.primitives import serialization
+                    
+                    # Generate RSA-2048 private key
+                    private_key = rsa.generate_private_key(
+                        public_exponent=65537,
+                        key_size=2048
+                    )
+                    
+                    # Serialize private key
+                    raw_key = private_key.private_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    )
+                    
+                    logger.info("Generated RSA-2048 private key for JWT signing")
+                    
+                else:  # JWT_RSA_PUBLIC
+                    raise ValueError("Public keys should be derived from private keys, not generated independently")
+                
+            elif key_type in [KeyType.JWT_ECDSA_PRIVATE, KeyType.JWT_ECDSA_PUBLIC]:
+                # ECDSA keys for JWT signing
+                if key_type == KeyType.JWT_ECDSA_PRIVATE:
+                    from cryptography.hazmat.primitives.asymmetric import ec
+                    from cryptography.hazmat.primitives import serialization
+                    
+                    # Generate ECDSA P-256 private key
+                    private_key = ec.generate_private_key(ec.SECP256R1())
+                    
+                    # Serialize private key
+                    raw_key = private_key.private_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    )
+                    
+                    logger.info("Generated ECDSA P-256 private key for JWT signing")
+                    
+                else:  # JWT_ECDSA_PUBLIC
+                    raise ValueError("Public keys should be derived from private keys, not generated independently")
                 
             elif key_type == KeyType.HOMOMORPHIC_MASTER:
                 # Paillier key parameters (this would be more complex in real implementation)
@@ -274,23 +326,23 @@ class MediVoteKeyManager:
             # Persist to disk
             self._save_key_to_disk(key_id, key_store)
             
-            logger.critical(f"🔑 GENERATED NEW KEY: {key_id}")
-            logger.critical(f"   🏷️  Type: {key_type.value}")
-            logger.critical(f"   📝 Purpose: {purpose}")
-            logger.critical(f"   🔐 Algorithm: {algorithm}")
-            logger.critical(f"   📊 Length: {len(raw_key)} bytes")
-            logger.critical(f"   ⏰ Expires: {expires_at.isoformat() if expires_at else 'Never'}")
-            logger.critical(f"   🌍 Environment: {self.environment.value}")
+            logger.critical(f"GENERATED NEW KEY: {key_id}")
+            logger.critical(f"   Type: {key_type.value}")
+            logger.critical(f"   Purpose: {purpose}")
+            logger.critical(f"   Algorithm: {algorithm}")
+            logger.critical(f"   Length: {len(raw_key)} bytes")
+            logger.critical(f"   Expires: {expires_at.isoformat() if expires_at else 'Never'}")
+            logger.critical(f"   Environment: {self.environment.value}")
             
             return key_id
             
         except Exception as e:
-            logger.error(f"❌ Key generation failed: {e}")
+            logger.error(f"Key generation failed: {e}")
             raise ValueError(f"Failed to generate {key_type.value} key: {e}")
     
     def get_key(self, key_id: str) -> bytes:
         """
-        🔓 SECURE KEY RETRIEVAL with access control and audit logging
+        SECURE KEY RETRIEVAL with access control and audit logging
         
         Retrieves and decrypts a key for authorized use:
         - Verifies key integrity before use
@@ -313,15 +365,15 @@ class MediVoteKeyManager:
             
             # Check if key has expired
             if metadata.expires_at and datetime.utcnow() > metadata.expires_at:
-                logger.warning(f"⚠️  Key {key_id} has expired")
+                logger.warning(f"WARNING: Key {key_id} has expired")
                 if self.environment == Environment.PRODUCTION:
                     raise ValueError(f"Key {key_id} has expired")
                 else:
-                    logger.warning("🚨 Using expired key in development mode")
+                    logger.warning("WARNING: Using expired key in development mode")
             
             # Check if key rotation is required
             if metadata.rotation_required:
-                logger.warning(f"⚠️  Key {key_id} requires rotation")
+                logger.warning(f"WARNING: Key {key_id} requires rotation")
             
             # Decrypt the key
             fernet = Fernet(base64.urlsafe_b64encode(self.master_key))
@@ -331,7 +383,7 @@ class MediVoteKeyManager:
             # Verify key integrity
             verification_hash = hashlib.sha256(raw_key).hexdigest()
             if verification_hash != key_store.verification_hash:
-                logger.error(f"❌ Key integrity check failed for {key_id}")
+                logger.error(f"ERROR: Key integrity check failed for {key_id}")
                 raise ValueError(f"Key integrity compromised: {key_id}")
             
             # Update usage statistics
@@ -341,17 +393,17 @@ class MediVoteKeyManager:
             # Persist updated metadata
             self._save_key_to_disk(key_id, key_store)
             
-            logger.debug(f"🔓 Key accessed: {key_id} (usage: {metadata.usage_count})")
+            logger.debug(f"Key accessed: {key_id} (usage: {metadata.usage_count})")
             
             return raw_key
             
         except Exception as e:
-            logger.error(f"❌ Key retrieval failed for {key_id}: {e}")
+            logger.error(f"Key retrieval failed for {key_id}: {e}")
             raise ValueError(f"Failed to retrieve key {key_id}: {e}")
     
     def get_key_by_type(self, key_type: KeyType, latest: bool = True) -> Tuple[str, bytes]:
         """
-        🔍 RETRIEVE KEY BY TYPE for system components
+        RETRIEVE KEY BY TYPE for system components
         
         Finds and retrieves a key of the specified type:
         - Returns the latest version by default
@@ -387,11 +439,67 @@ class MediVoteKeyManager:
             return key_id, raw_key
             
         except Exception as e:
-            logger.error(f"❌ Failed to retrieve {key_type.value} key: {e}")
+            logger.error(f"Failed to retrieve {key_type.value} key: {e}")
             raise ValueError(f"Failed to retrieve {key_type.value} key: {e}")
     
+    def get_raw_key(self, key_id: str) -> bytes:
+        """
+        Decrypt and return raw key bytes (internal use)
+        
+        Args:
+            key_id: Unique key identifier
+            
+        Returns:
+            Raw key bytes (decrypted)
+        """
+        if key_id not in self.key_store:
+            raise ValueError(f"Key not found: {key_id}")
+        
+        key_store = self.key_store[key_id]
+        
+        try:
+            # Decrypt the key
+            fernet = Fernet(base64.urlsafe_b64encode(self.master_key))
+            encrypted_key = base64.b64decode(key_store.encrypted_key_data.encode())
+            raw_key = fernet.decrypt(encrypted_key)
+            
+            # Verify integrity
+            computed_hash = hashlib.sha256(raw_key).hexdigest()
+            if computed_hash != key_store.verification_hash:
+                raise ValueError("Key integrity verification failed")
+            
+            return raw_key
+            
+        except Exception as e:
+            logger.error(f"Key decryption failed for {key_id}: {e}")
+            raise ValueError(f"Failed to decrypt key: {key_id}")
+    
+    def rotate_key(self, key_id: str) -> str:
+        """Rotate an existing key (generate new version)"""
+        if key_id not in self.key_store:
+            raise ValueError(f"Key not found: {key_id}")
+        
+        old_store = self.key_store[key_id]
+        old_metadata = old_store.metadata
+        
+        # Generate new key with same parameters but incremented version
+        new_key_id = self.generate_key(
+            key_type=old_metadata.key_type,
+            purpose=f"{old_metadata.purpose} (rotated from {key_id})",
+            algorithm=old_metadata.algorithm,
+            key_length=old_metadata.key_length
+        )
+        
+        # Mark old key for rotation
+        old_metadata.rotation_required = True
+        self._save_key_to_disk(key_id, old_store)
+        
+        logger.critical(f"KEY ROTATED: {key_id} → {new_key_id}")
+        
+        return new_key_id
+    
     def _save_key_to_disk(self, key_id: str, key_store: SecureKeyStore):
-        """Save encrypted key to disk with proper security"""
+        """Save a key to encrypted storage on disk"""
         key_file = self.config_dir / f"{key_id}.key"
         
         try:
@@ -414,10 +522,10 @@ class MediVoteKeyManager:
             # Atomic move to final location
             temp_file.replace(key_file)
             
-            logger.debug(f"💾 Saved key to disk: {key_file}")
+            logger.debug(f"Key saved to disk: {key_file}")
             
         except Exception as e:
-            logger.error(f"❌ Failed to save key {key_id}: {e}")
+            logger.error(f"Failed to save key {key_id}: {e}")
             raise ValueError(f"Failed to save key {key_id}: {e}")
     
     def _load_existing_keys(self):
@@ -427,6 +535,10 @@ class MediVoteKeyManager:
             
             for key_file in key_files:
                 try:
+                    # Skip master.key file - it's binary, not JSON
+                    if key_file.name == "master.key":
+                        continue
+                        
                     with open(key_file, 'r', encoding='utf-8') as f:
                         key_data = json.load(f)
                     
@@ -456,16 +568,18 @@ class MediVoteKeyManager:
                     )
                     
                     self.key_store[metadata.key_id] = key_store
-                    logger.debug(f"📁 Loaded key: {metadata.key_id}")
+                    logger.debug(f"Loaded key: {metadata.key_id}")
                     
                 except Exception as e:
-                    logger.warning(f"⚠️  Failed to load key file {key_file}: {e}")
+                    # Skip non-JSON key files (like master.key which is binary)
+                    if key_file.name != "master.key":
+                        logger.warning(f"Failed to load key file {key_file}: {e}")
                     continue
             
-            logger.info(f"📚 Loaded {len(self.key_store)} keys from disk")
+            logger.info(f"Loaded {len(self.key_store)} keys from disk")
             
         except Exception as e:
-            logger.error(f"❌ Failed to load existing keys: {e}")
+            logger.error(f"Failed to load existing keys: {e}")
     
     def list_keys(self) -> List[Dict[str, Any]]:
         """List all keys with their metadata (for admin purposes)"""
@@ -479,29 +593,54 @@ class MediVoteKeyManager:
             for key_id, store in self.key_store.items()
         ]
     
-    def rotate_key(self, key_id: str) -> str:
-        """Rotate an existing key (generate new version)"""
-        if key_id not in self.key_store:
-            raise ValueError(f"Key not found: {key_id}")
+    def _check_key_rotation_needed(self) -> bool:
+        """Check if any keys need rotation based on age, usage, or explicit requirement"""
+        rotation_needed = False
         
-        old_store = self.key_store[key_id]
-        old_metadata = old_store.metadata
+        for key_id, store in self.key_store.items():
+            metadata = store.metadata
+            
+            # Check explicit rotation requirement
+            if metadata.rotation_required:
+                logger.warning(f"Key {key_id} explicitly marked for rotation")
+                rotation_needed = True
+                continue
+            
+            # Check expiration-based rotation
+            if metadata.expires_at:
+                days_until_expiry = (metadata.expires_at - datetime.utcnow()).days
+                if days_until_expiry <= 30:  # Rotate 30 days before expiry
+                    logger.warning(f"Key {key_id} approaching expiration ({days_until_expiry} days)")
+                    metadata.rotation_required = True
+                    rotation_needed = True
+                    continue
+            
+            # Check age-based rotation (production keys)
+            if self.environment == Environment.PRODUCTION:
+                key_age_days = (datetime.utcnow() - metadata.created_at).days
+                
+                # Define rotation thresholds by key type
+                rotation_thresholds = {
+                    KeyType.JWT_SECRET: 30,        # JWT keys: 30 days
+                    KeyType.DATABASE_ENCRYPTION: 90,   # Database keys: 90 days
+                    KeyType.AUDIT_LOG_ENCRYPTION: 90,  # Audit keys: 90 days
+                    KeyType.SESSION_ENCRYPTION: 60,    # Session keys: 60 days
+                }
+                
+                threshold = rotation_thresholds.get(metadata.key_type, 365)  # Default: 1 year
+                
+                if key_age_days > threshold:
+                    logger.warning(f"Key {key_id} exceeds age threshold ({key_age_days} > {threshold} days)")
+                    metadata.rotation_required = True
+                    rotation_needed = True
+            
+            # Check usage-based rotation (high-usage keys)
+            if metadata.usage_count > 10000:  # High usage threshold
+                logger.warning(f"Key {key_id} has high usage count ({metadata.usage_count})")
+                metadata.rotation_required = True
+                rotation_needed = True
         
-        # Generate new key with same parameters but incremented version
-        new_key_id = self.generate_key(
-            key_type=old_metadata.key_type,
-            purpose=f"{old_metadata.purpose} (rotated from {key_id})",
-            algorithm=old_metadata.algorithm,
-            key_length=old_metadata.key_length
-        )
-        
-        # Mark old key for rotation
-        old_metadata.rotation_required = True
-        self._save_key_to_disk(key_id, old_store)
-        
-        logger.critical(f"🔄 KEY ROTATED: {key_id} → {new_key_id}")
-        
-        return new_key_id
+        return rotation_needed
     
     def get_key_statistics(self) -> Dict[str, Any]:
         """Get key management statistics for monitoring"""
@@ -545,20 +684,18 @@ def get_key_manager() -> MediVoteKeyManager:
     return _key_manager
 
 
-def get_system_key(key_type: KeyType) -> bytes:
-    """Convenience function to get a system key by type"""
-    key_manager = get_key_manager()
-    _, raw_key = key_manager.get_key_by_type(key_type)
-    return raw_key
+def get_system_key(key_type: KeyType) -> Tuple[str, bytes]:
+    """Get a system key by type (returns key_id and raw_key tuple)"""
+    return get_key_manager().get_key_by_type(key_type)
 
 
 # Development key provisioning functions
 def provision_development_keys() -> Dict[str, str]:
     """
-    🏗️  PROVISION DEVELOPMENT KEYS for local testing
+    PROVISION DEVELOPMENT KEYS for local testing
     
     This function generates all required keys for development environment.
-    ⚠️  NEVER use these keys in production!
+    WARNING: NEVER use these keys in production!
     """
     key_manager = get_key_manager()
     
@@ -599,12 +736,12 @@ def provision_development_keys() -> Dict[str, str]:
         32
     )
     
-    logger.critical("🏗️  DEVELOPMENT KEYS PROVISIONED")
-    logger.critical("   🔑 Database encryption key generated")
-    logger.critical("   🔍 Audit log encryption key generated")
-    logger.critical("   🎫 JWT secret key generated")
-    logger.critical("   👤 Session encryption key generated")
-    logger.critical("   ⚠️  THESE ARE DEVELOPMENT KEYS - REGENERATE FOR PRODUCTION")
+    logger.critical("DEVELOPMENT KEYS PROVISIONED")
+    logger.critical("   Database encryption key generated")
+    logger.critical("   Audit log encryption key generated")
+    logger.critical("   JWT secret key generated")
+    logger.critical("   Session encryption key generated")
+    logger.critical("   WARNING: THESE ARE DEVELOPMENT KEYS - REGENERATE FOR PRODUCTION")
     
     return generated_keys
 
@@ -622,12 +759,12 @@ if __name__ == "__main__":
     
     if command == "init":
         initialize_key_manager(Environment.DEVELOPMENT)
-        print("✅ Key manager initialized")
+        print("[OK] Key manager initialized")
         
     elif command == "provision":
         initialize_key_manager(Environment.DEVELOPMENT)
         keys = provision_development_keys()
-        print("✅ Development keys provisioned:")
+        print("[OK] Development keys provisioned:")
         for purpose, key_id in keys.items():
             print(f"   {purpose}: {key_id}")
             
@@ -635,7 +772,7 @@ if __name__ == "__main__":
         initialize_key_manager(Environment.DEVELOPMENT)
         km = get_key_manager()
         keys = km.list_keys()
-        print(f"📚 {len(keys)} keys found:")
+        print(f"INFO: {len(keys)} keys found:")
         for key in keys:
             print(f"   {key['key_id']}: {key['key_type']} ({key['purpose']})")
             
@@ -643,7 +780,7 @@ if __name__ == "__main__":
         initialize_key_manager(Environment.DEVELOPMENT)
         km = get_key_manager()
         stats = km.get_key_statistics()
-        print("📊 Key Statistics:")
+        print("Key Statistics:")
         print(json.dumps(stats, indent=2))
         
     else:

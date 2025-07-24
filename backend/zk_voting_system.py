@@ -81,13 +81,13 @@ class RealZKVotingSystem:
         self.nullifier_set: set[str] = set()  # Prevents double voting
         
         # Initialize REAL zero-knowledge proof system
-        logger.info("🔧 Initializing REAL zero-knowledge proof system...")
+        logger.info("Initializing REAL zero-knowledge proof system...")
         self.zk_prover = create_real_zk_prover("./circuits")
         
         # We'll get the verification key from the prover after setup
         self.zk_verifier = None
         
-        logger.info("✅ Real ZK voting system initialized")
+        logger.info("Real ZK voting system initialized")
     
     def _generate_master_key(self) -> bytes:
         """Generate cryptographic master key for vote encryption"""
@@ -155,7 +155,7 @@ class RealZKVotingSystem:
             zk_proof = self.zk_prover.generate_proof(public_inputs, private_inputs)
             
             if zk_proof:
-                logger.info(f"✅ Generated REAL zero-knowledge proof for ballot {ballot_id}")
+                logger.info(f"Generated REAL zero-knowledge proof for ballot {ballot_id}")
                 return zk_proof
             else:
                 logger.error("Failed to generate zero-knowledge proof")
@@ -187,9 +187,9 @@ class RealZKVotingSystem:
             is_valid = self.zk_verifier.verify_proof(zk_proof, public_inputs)
             
             if is_valid:
-                logger.info(f"✅ Zero-knowledge proof verified for ballot {ballot_id}")
+                logger.info(f"Zero-knowledge proof verified for ballot {ballot_id}")
             else:
-                logger.warning(f"❌ Zero-knowledge proof verification failed for ballot {ballot_id}")
+                logger.warning(f"Zero-knowledge proof verification failed for ballot {ballot_id}")
             
             return is_valid
             
@@ -270,7 +270,7 @@ class RealZKVotingSystem:
             
             self.vote_commitments[receipt_id] = commitment
             
-            logger.info(f"✅ Anonymous vote cast successfully with zero-knowledge proof")
+            logger.info(f"Anonymous vote cast successfully with zero-knowledge proof")
             
             return {
                 "success": True,
@@ -305,7 +305,7 @@ class RealZKVotingSystem:
                 encrypted_vote = he_system.encrypt_vote(choice, f"candidate_{i}", ballot_id)
                 encrypted_choices.append(encrypted_vote.ciphertext)
             
-            logger.info(f"✅ Vote choices encrypted with REAL homomorphic encryption")
+            logger.info(f"Vote choices encrypted with REAL homomorphic encryption")
             return encrypted_choices
             
         except Exception as e:
@@ -388,7 +388,7 @@ class RealZKVotingSystem:
             tallying_system = create_vote_tallying_system()
             election_setup = tallying_system.setup_election()
             
-            logger.info(f"🏗️ Initialized homomorphic tallying system with {len(stored_votes)} votes")
+            logger.info(f"Initialized homomorphic tallying system with {len(stored_votes)} votes")
             
             # Group encrypted votes by candidate for homomorphic addition
             encrypted_votes_by_candidate = {candidate: [] for candidate in candidates}
@@ -419,7 +419,7 @@ class RealZKVotingSystem:
                 final_results = tallying_system.tally_votes(ballot_id)
                 
                 if final_results:
-                    logger.info(f"✅ REAL homomorphic tallying completed successfully")
+                    logger.info(f"REAL homomorphic tallying completed successfully")
                     return final_results
                 else:
                     logger.warning("Homomorphic tallying returned empty results")
@@ -428,7 +428,7 @@ class RealZKVotingSystem:
                 logger.error(f"Error in homomorphic tallying: {e}")
             
             # Fallback: Count using zero-knowledge verification
-            logger.info("🔄 Falling back to zero-knowledge verified counting")
+            logger.info("Falling back to zero-knowledge verified counting")
             
             candidate_counts = {candidate: 0 for candidate in candidates}
             valid_votes = 0
@@ -466,8 +466,8 @@ class RealZKVotingSystem:
                     logger.warning(f"Error processing vote {vote_record.vote_id}: {e}")
                     continue
             
-            logger.info(f"✅ Anonymous vote counting completed: {valid_votes} valid votes")
-            logger.info(f"🔒 Individual vote choices never revealed during counting")
+            logger.info(f"Anonymous vote counting completed: {valid_votes} valid votes")
+            logger.info(f"Individual vote choices never revealed during counting")
             
             return candidate_counts
             

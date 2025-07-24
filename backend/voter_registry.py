@@ -98,9 +98,11 @@ class VoterRegistry:
                         voter_id: VoterCredentials.from_dict(voter_data)
                         for voter_id, voter_data in data.items()
                     }
-                    logger.info(f"🔓 Loaded {len(self.voter_credentials)} voter credentials from encrypted storage")
+                    logger.info(f"Loaded {len(self.voter_credentials)} voter credentials from encrypted storage")
                 except Exception as decrypt_error:
-                    logger.warning(f"Could not decrypt voter credentials, starting fresh: {decrypt_error}")
+                    print(f"Decryption error: ")
+                    print(f"Could not decrypt voter credentials, starting fresh: ")
+                    print(f"Decryption error: {decrypt_error}")
                     self.voter_credentials = {}
             
             # Load active sessions  
@@ -116,9 +118,11 @@ class VoterRegistry:
                     }
                     # Clean expired sessions
                     self._cleanup_expired_sessions()
-                    logger.info(f"🔓 Loaded {len(self.active_sessions)} active sessions from encrypted storage")
+                    logger.info(f"Loaded {len(self.active_sessions)} active sessions from encrypted storage")
                 except Exception as decrypt_error:
-                    logger.warning(f"Could not decrypt sessions, starting fresh: {decrypt_error}")
+                    print(f"Decryption error:")
+                    print(f"Could not decrypt sessions, starting fresh:")
+                    print(f"Decryption error: {decrypt_error}")
                     self.active_sessions = {}
             
             # Load audit events
@@ -128,9 +132,11 @@ class VoterRegistry:
                 try:
                     decrypted_data = encryption_service.decrypt_data(encrypted_data)
                     self.audit_events = json.loads(decrypted_data)
-                    logger.info(f"🔓 Loaded {len(self.audit_events)} audit events from encrypted storage")
+                    logger.info(f"Loaded {len(self.audit_events)} audit events from encrypted storage")
                 except Exception as decrypt_error:
-                    logger.warning(f"Could not decrypt audit data, starting fresh: {decrypt_error}")
+                    print(f"Decryption error:")
+                    print(f"Could not decrypt audit data, starting fresh:")
+                    print(f"Decryption error: {decrypt_error}")
                     self.audit_events = []
                     
         except Exception as e:
@@ -166,7 +172,7 @@ class VoterRegistry:
             with open(self.audit_file, 'w') as f:
                 f.write(encrypted_audit)
                 
-            logger.debug("🔒 Encrypted voter data saved successfully")
+            logger.debug("Encrypted voter data saved successfully")
             
         except Exception as e:
             logger.error(f"Error saving encrypted voter data: {e}")
@@ -256,7 +262,7 @@ class VoterRegistry:
                 "full_name": registration_data["full_name"]
             }, True)
             
-            logger.info(f"🎯 New voter registered: {username} ({voter_id})")
+            logger.info(f"New voter registered: {username} ({voter_id})")
             
             return {
                 "success": True,
@@ -405,7 +411,7 @@ class VoterRegistry:
                 "session_id": session_id
             }, True)
             
-            logger.info(f"🔒 Voter logged out: {session.username}")
+            logger.info(f"Voter logged out: {session.username}")
     
     def _hash_password(self, password: str) -> str:
         """Hash password securely"""

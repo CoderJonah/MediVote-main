@@ -72,24 +72,24 @@ if CRYPTO_AVAILABLE:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager with cryptographic initialization"""
-    print("🚀 Starting MediVote Backend (Fixed Version)")
+    print("Starting MediVote Backend (Fixed Version)")
     
     # Initialize cryptographic services
     if blockchain_service:
         try:
             await blockchain_service.initialize()
-            print("✅ Blockchain service initialized")
+            print("Blockchain service initialized")
         except Exception as e:
             print(f"Warning: Blockchain initialization failed: {e}")
     
     if tallying_system:
         try:
             tallying_system.setup_election()
-            print("✅ Homomorphic encryption initialized")
+            print("Homomorphic encryption initialized")
         except Exception as e:
             print(f"Warning: Homomorphic encryption initialization failed: {e}")
     
-    print("✅ Basic services initialized")
+    print("Basic services initialized")
     
     yield
     
@@ -100,7 +100,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"Warning: Blockchain cleanup failed: {e}")
     
-    print("🛑 Shutting down MediVote Backend")
+    print("Shutting down MediVote Backend")
 
 # Create FastAPI app
 app = FastAPI(
@@ -128,7 +128,7 @@ if ROUTERS_AVAILABLE:
         app.include_router(voting_router, prefix="/api/voting", tags=["Voting"])
         app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
         app.include_router(verification_router, prefix="/api/verification", tags=["Verification"])
-        print("✅ API routers included successfully")
+        print("API routers included successfully")
     except Exception as e:
         print(f"Warning: Failed to include some API routers: {e}")
 
@@ -443,7 +443,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 if __name__ == "__main__":
-    print("🚀 Starting MediVote Backend (Fixed Version)")
+    print("Starting MediVote Backend (Fixed Version)")
     uvicorn.run(
         app,
         host=settings.HOST,

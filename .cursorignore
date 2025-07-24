@@ -1,0 +1,116 @@
+# MediVote Cursor Ignore File
+# Excludes files that don't need AI context while keeping keys/ and logs/ accessible
+
+# Binary assets and media files
+assets/
+*.ico
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environment
+venv/
+env/
+.env
+.venv
+
+# Runtime data files (just JSON data storage)
+cache/
+voter_data/
+blockchain_data/
+blockchain_backup/
+network_data/
+dashboard_data/
+uploads/
+
+# Backup and temporary directories
+backup/
+temp/
+tmp/
+.tmp/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git (if present)
+.git/
+.gitignore
+
+# Node.js (if present)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Testing and coverage
+.coverage
+.pytest_cache/
+.tox/
+htmlcov/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Large generated documentation (keep source docs)
+site/
+docs/_build/
+
+# Monitoring data
+monitoring/grafana/data/
+monitoring/prometheus/data/
+
+# SSL certificates (keep nginx config files)
+ssl/
+
+# Circuit compilation outputs (keep source .circom files)
+circuits/**/*.wasm
+circuits/**/*.zkey
+circuits/**/*.r1cs
+circuits/**/*.sym
+
+# Large configuration dumps
+medivote-dashboard-starter/
+
+# Keep these important directories accessible:
+# - keys/ (cryptographic keys - user wants access)  
+# - logs/ (log files - user specifically requested access)
+# - All source code files
+# - Configuration files
+# - Documentation files 

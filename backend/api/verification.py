@@ -17,7 +17,6 @@ from loguru import logger
 
 from core.config import get_settings
 from core.blockchain import BlockchainService
-from core.crypto.homomorphic_encryption import verify_homomorphic_property
 from core.database import get_db
 
 settings = get_settings()

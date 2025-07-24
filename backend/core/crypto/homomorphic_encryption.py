@@ -240,13 +240,13 @@ class RealThresholdDecryption:
         self.trustee_keys: Dict[int, TrusteeKey] = {}
         self.master_key: Optional[PaillierPrivateKey] = None
         
-        logger.info(f"🔐 Initialized threshold decryption: {threshold}/{total_trustees}")
+        logger.info(f"Initialized threshold decryption: {threshold}/{total_trustees}")
     
     def generate_threshold_keys(self, master_private_key: PaillierPrivateKey) -> Dict[int, Dict[str, Any]]:
         """Generate threshold keys using REAL Shamir's Secret Sharing"""
         self.master_key = master_private_key
         
-        logger.info(f"🔑 Generating {self.total_trustees} threshold keys with REAL Shamir's Secret Sharing...")
+        logger.info(f"Generating {self.total_trustees} threshold keys with REAL Shamir's Secret Sharing...")
         
         # REAL IMPLEMENTATION: Use Shamir's Secret Sharing to split the private key
         # We need to split both p and q components of the Paillier private key
@@ -553,7 +553,7 @@ class RealVoteTallyingSystem:
         self.threshold_system = RealThresholdDecryption(threshold, total_trustees)
         self.encrypted_votes: List[EncryptedVote] = []
         
-        logger.info(f"🏛️ Initialized vote tallying system: {key_size}-bit keys, {threshold}/{total_trustees} threshold")
+        logger.info(f"Initialized vote tallying system: {key_size}-bit keys, {threshold}/{total_trustees} threshold")
     
     def setup_election(self) -> Dict[str, Any]:
         """Setup encryption keys for election"""

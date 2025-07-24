@@ -201,7 +201,7 @@ class AuditLog(Base):
         if encryption_key is None:
             try:
                 # Get encryption key from key management system
-                from backend.core.key_integration import get_audit_encryption_key
+                from core.key_integration import get_audit_encryption_key
                 encryption_key = get_audit_encryption_key()
                 logger.debug("🔑 Using audit encryption key from key management system")
             except Exception as e:
@@ -282,7 +282,7 @@ class AuditLog(Base):
         if encryption_key is None:
             try:
                 # Get encryption key from key management system
-                from backend.core.key_integration import get_audit_encryption_key
+                from core.key_integration import get_audit_encryption_key
                 encryption_key = get_audit_encryption_key()
                 logger.debug("🔑 Using audit encryption key from key management system for decryption")
             except Exception as e:

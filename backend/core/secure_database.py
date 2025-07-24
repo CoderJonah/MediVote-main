@@ -102,9 +102,9 @@ class SecureDatabase:
         if encryption_key is None:
             try:
                 # Get encryption key from key management system
-                from .key_integration import get_database_encryption_key
+                from core.key_integration import get_database_encryption_key
                 self.encryption_key = get_database_encryption_key()
-                logger.critical("🔑 Using database encryption key from key management system")
+                logger.critical("Using database encryption key from key management system")
             except Exception as e:
                 logger.error(f"❌ Failed to get encryption key from key manager: {e}")
                 raise ValueError("SECURITY ERROR: No encryption key available - initialize key management system first")
@@ -123,10 +123,10 @@ class SecureDatabase:
         # Initialize database schema
         self._initialize_database()
         
-        logger.critical(f"🔐 SECURE DATABASE INITIALIZED: {self.db_path}")
-        logger.critical(f"   📊 All data encrypted with AES-256")
-        logger.critical(f"   🛡️ File permissions: Owner only (700)")
-        logger.critical(f"   🔑 Key management: {'Integrated' if encryption_key is None else 'Manual'}")
+        logger.critical(f"SECURE DATABASE INITIALIZED: {self.db_path}")
+        logger.critical(f"   All data encrypted with AES-256")
+        logger.critical(f"   File permissions: Owner only (700)")
+        logger.critical(f"   Key management: {'Integrated' if encryption_key is None else 'Manual'}")
     
     def _generate_database_key(self) -> bytes:
         """Generate or load database encryption key"""
@@ -240,11 +240,11 @@ class SecureDatabase:
             """)
             
             conn.commit()
-            logger.info("✅ Database schema initialized successfully")
+            logger.info("Database schema initialized successfully")
     
-    def _encrypt_data(self, data: Union[str, Dict[str, Any]]) -> str:
+    def _encrypt_data(self, data: Union[str, Dict[str, Any], List[Any]]) -> str:
         """Encrypt sensitive data before storage"""
-        if isinstance(data, dict):
+        if isinstance(data, (dict, list)):
             data = json.dumps(data, sort_keys=True)
         
         encrypted_data = self.fernet.encrypt(data.encode())
@@ -742,6 +742,52 @@ class SecureDatabase:
         except Exception as e:
             logger.error(f"Error getting database stats: {e}")
             return {}
+    
+    def get_eligible_voters(self, election_id: str) -> List[VoterRecord]:
+        """
+        Get all eligible voters for a specific election
+        
+        Args:
+            election_id: The election identifier
+            
+        Returns:
+            List of VoterRecord objects for eligible voters
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute("""
+                    SELECT voter_id, encrypted_credentials, registration_date, 
+                           status, last_activity, verification_hash
+                    FROM voters 
+                    WHERE status IN ('verified', 'registered')
+                    ORDER BY registration_date ASC
+                """)
+                
+                eligible_voters = []
+                for row in cursor.fetchall():
+                    # Decrypt voter credentials
+                    try:
+                        credentials = self._decrypt_data(row["encrypted_credentials"])
+                        voter_record = VoterRecord(
+                            voter_id=row["voter_id"],
+                            encrypted_credentials=credentials,
+                            registration_date=row["registration_date"],
+                            status=row["status"],
+                            last_activity=row["last_activity"] or "",
+                            verification_hash=row["verification_hash"]
+                        )
+                        eligible_voters.append(voter_record)
+                    except Exception as e:
+                        logger.warning(f"Could not decrypt voter credentials for {row['voter_id']}: {e}")
+                        continue
+                
+                logger.info(f"Retrieved {len(eligible_voters)} eligible voters for election {election_id}")
+                return eligible_voters
+                
+        except Exception as e:
+            logger.error(f"Error getting eligible voters for election {election_id}: {e}")
+            return []
 
 
 # Global database instance
@@ -751,7 +797,9 @@ def get_secure_database() -> SecureDatabase:
     """Get global secure database instance"""
     global _secure_db
     if _secure_db is None:
-        _secure_db = SecureDatabase()
+        # Use default database path for the secure voting database
+        default_db_path = "data/medivote_secure.db"
+        _secure_db = SecureDatabase(default_db_path)
     return _secure_db
 
 
@@ -780,6 +828,59 @@ def migrate_mock_data_to_database():
             
             db.create_election(sample_election, "system_migration")
             logger.info("✅ Created sample secure election")
+        
+        # Create sample voters if none exist
+        try:
+            with sqlite3.connect(db.db_path) as conn:
+                cursor = conn.execute("SELECT COUNT(*) FROM voters")
+                voter_count = cursor.fetchone()[0]
+                
+                if voter_count == 0:
+                    logger.info("🔐 Creating sample encrypted voters for testing...")
+                    
+                    # Create sample voters with encrypted credentials
+                    sample_voters = []
+                    for i in range(1, 26):  # 25 sample voters
+                        # Create realistic voter credentials
+                        voter_credentials = {
+                            "voter_id": f"voter_{i:03d}",
+                            "name": f"Voter {i}",
+                            "registration_date": (datetime.utcnow() - timedelta(days=30-i)).isoformat(),
+                            "district": f"District_{(i % 5) + 1}",
+                            "encrypted_did": f"did:medivote:voter:{secrets.token_hex(16)}"
+                        }
+                        
+                        # Encrypt the voter credentials
+                        encrypted_credentials = db._encrypt_data(voter_credentials)
+                        
+                        # Generate verification hash (used for Merkle tree)
+                        verification_hash = hashlib.sha256(
+                            f"{voter_credentials['voter_id']}:{voter_credentials['encrypted_did']}:{secrets.token_hex(8)}".encode()
+                        ).hexdigest()
+                        
+                        # Insert into database
+                        conn.execute("""
+                            INSERT INTO voters 
+                            (voter_id, encrypted_credentials, registration_date, status, last_activity, verification_hash)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (
+                            f"voter_{i:03d}",
+                            encrypted_credentials,
+                            voter_credentials["registration_date"],
+                            "verified" if i <= 20 else "registered",  # 20 verified, 5 registered
+                            datetime.utcnow().isoformat(),
+                            verification_hash
+                        ))
+                    
+                    conn.commit()
+                    logger.info(f"✅ Created {25} sample voters (20 verified, 5 registered)")
+                    logger.info("   🔐 All voter data encrypted with database master key")
+                    logger.info("   🧂 Verification hashes salted for privacy protection")
+                else:
+                    logger.info(f"✅ Database already contains {voter_count} voters")
+                    
+        except Exception as voter_error:
+            logger.error(f"Error creating sample voters: {voter_error}")
         
         logger.info("✅ Database migration completed")
         return True

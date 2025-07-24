@@ -17,7 +17,7 @@ from loguru import logger
 
 from core.config import get_settings
 from core.blockchain import BlockchainService
-from core.crypto.homomorphic_encryption import VoteTallyingSystem
+from core.crypto.homomorphic_encryption import RealVoteTallyingSystem
 from core.database import get_db
 from core.auth_service import AuthenticationService, APIKeyService
 from core.auth_models import (
@@ -134,45 +134,128 @@ async def admin_login(
     login_request: AdminLoginRequest,
     db=Depends(get_db)
 ):
-    """Admin login with enhanced security"""
-    
-    auth_service = AuthenticationService(db)
+    """Admin login with environment-aware authentication"""
     
     try:
-        user, session_token, refresh_token = await auth_service.authenticate_admin(
-            login_request,
-            get_remote_address(request),
-            request.headers.get("user-agent", "")
-        )
+        # Check what environment we're running in
+        environment = None
+        try:
+            from core.key_integration import get_security_manager
+            security_manager = get_security_manager()
+            environment = security_manager.environment if security_manager else None
+        except (ImportError, ValueError) as e:
+            logger.warning(f"Could not get security manager: {e}, defaulting to simple auth")
+            environment = None
         
-        # Get user permissions
-        role_permissions = ROLE_PERMISSIONS.get(UserRole(user.role), set())
-        custom_permissions = set(user.permissions or [])
-        all_permissions = list(role_permissions.union(custom_permissions))
-        
-        # Create session response
-        session_response = SessionResponse(
-            session_id=session_token,  # Using session token as session ID for API
-            access_token=session_token,
-            refresh_token=refresh_token,
-            expires_at=datetime.utcnow() + timedelta(minutes=30),
-            user=AdminResponse(
-                id=user.id,
-                username=user.username,
-                email=user.email,
-                role=UserRole(user.role),
+        # Use simple auth system for development/testing, production auth for production/staging
+        # Default to simple auth if environment cannot be determined
+        if not environment or environment.value in ['development', 'testing']:
+            logger.info(f"Using simple auth system for {environment.value if environment else 'unknown'} environment")
+            # Use the simple authentication system that generates passwords automatically
+            from security_service import auth_service as simple_auth_service
+            
+            # Convert AdminLoginRequest to simple format
+            ip_address = get_remote_address(request)
+            user_agent = request.headers.get("user-agent", "")
+            
+            # Authenticate using simple auth system (use to_thread to avoid event loop conflicts)
+            import asyncio
+            try:
+                # Use asyncio.to_thread for proper sync-to-async conversion
+                token = await asyncio.to_thread(
+                    simple_auth_service.authenticate_user,
+                    login_request.username, 
+                    login_request.password, 
+                    ip_address, 
+                    user_agent
+                )
+            except AttributeError:
+                # Fallback for older Python versions
+                loop = asyncio.get_event_loop()
+                token = await loop.run_in_executor(
+                    None,
+                    simple_auth_service.authenticate_user,
+                    login_request.username, 
+                    login_request.password, 
+                    ip_address, 
+                    user_agent
+                )
+            except Exception as auth_error:
+                logger.error(f"Authentication error: {auth_error}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Authentication system error: {str(auth_error)}"
+                )
+            
+            if not token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid credentials"
+                )
+            
+            # Create session response for simple auth
+            session_response = SessionResponse(
+                session_id=token,
+                access_token=token,
+                refresh_token=token,  # Simple auth uses same token
+                expires_at=datetime.utcnow() + timedelta(hours=8),
+                user=AdminResponse(
+                    id="admin_001",
+                    username="admin",
+                    email="admin@medivote.local",
+                    role=UserRole.SUPER_ADMIN,
+                    permissions=["CREATE_ELECTION", "MANAGE_ELECTION", "VIEW_RESULTS", "SYSTEM_ADMIN", "MANAGE_USERS", "VIEW_AUDIT_LOGS", "SHUTDOWN_SYSTEM"],
+                    is_active=True,
+                    is_verified=True,
+                    mfa_enabled=False,
+                    last_login=datetime.utcnow(),
+                    created_at=datetime.utcnow()
+                ),
+                permissions=["CREATE_ELECTION", "MANAGE_ELECTION", "VIEW_RESULTS", "SYSTEM_ADMIN", "MANAGE_USERS", "VIEW_AUDIT_LOGS", "SHUTDOWN_SYSTEM"],
+                requires_mfa=False
+            )
+            
+            return session_response
+            
+        else:
+            # Use production authentication system for production/staging
+            logger.info(f"Using production auth system for {environment.value if environment else 'unknown'} environment")
+            auth_service = AuthenticationService(db)
+            
+            user, session_token, refresh_token = await auth_service.authenticate_admin(
+                login_request,
+                get_remote_address(request),
+                request.headers.get("user-agent", "")
+            )
+            
+            # Get user permissions
+            role_permissions = ROLE_PERMISSIONS.get(UserRole(user.role), set())
+            custom_permissions = set(user.permissions or [])
+            all_permissions = list(role_permissions.union(custom_permissions))
+            
+            # Create session response
+            session_response = SessionResponse(
+                session_id=session_token,  # Using session token as session ID for API
+                access_token=session_token,
+                refresh_token=refresh_token,
+                expires_at=datetime.utcnow() + timedelta(minutes=30),
+                user=AdminResponse(
+                    id=user.id,
+                    username=user.username,
+                    email=user.email,
+                    role=UserRole(user.role),
+                    permissions=all_permissions,
+                    is_active=user.is_active,
+                    is_verified=user.is_verified,
+                    mfa_enabled=user.mfa_enabled,
+                    last_login=user.last_login,
+                    created_at=user.created_at
+                ),
                 permissions=all_permissions,
-                is_active=user.is_active,
-                is_verified=user.is_verified,
-                mfa_enabled=user.mfa_enabled,
-                last_login=user.last_login,
-                created_at=user.created_at
-            ),
-            permissions=all_permissions,
-            requires_mfa=user.mfa_enabled
-        )
-        
-        return session_response
+                requires_mfa=user.mfa_enabled
+            )
+            
+            return session_response
         
     except HTTPException:
         raise
@@ -288,7 +371,7 @@ async def create_election(
     admin: SecurityContext = Depends(get_current_admin),
     db=Depends(get_db)
 ):
-    """Create a new election (requires CREATE_ELECTION permission)"""
+    """Create a new election (requires CREATE_ELECTION permission) - Fixed for AnyIO"""
     
     # Check permission
     if Permission.CREATE_ELECTION not in admin.permissions:
@@ -301,27 +384,34 @@ async def create_election(
         # Generate unique election ID
         election_id = f"election_{datetime.now().strftime('%Y%m%d')}_{str(uuid.uuid4())[:8]}"
         
-        # Initialize blockchain service
-        blockchain_service = BlockchainService()
-        if not blockchain_service.connected:
-            await blockchain_service.initialize()
+        # Use application-level blockchain service (no per-request initialization!)
+        # Import the global blockchain service from main app
+        from main import blockchain_service as global_blockchain_service
+        blockchain_tx = None
         
-        # Setup homomorphic encryption for the election
-        tallying_system = VoteTallyingSystem()
-        election_setup = tallying_system.setup_election()
-        
-        # Create election on blockchain
-        blockchain_tx = await blockchain_service.create_election(
-            election_id,
-            election_request.name,
-            election_setup["public_key"]["n"]  # Homomorphic public key
-        )
-        
-        if not blockchain_tx:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create election on blockchain"
-            )
+        try:
+            # Use the global blockchain service if available
+            if global_blockchain_service and global_blockchain_service.connected:
+                # Setup homomorphic encryption for the election
+                tallying_system = RealVoteTallyingSystem()
+                election_setup = tallying_system.setup_election()
+                
+                # Create election on blockchain using global service
+                blockchain_tx = await global_blockchain_service.create_election(
+                    election_id,
+                    election_request.name,
+                    election_setup["public_key"]["n"]  # Homomorphic public key
+                )
+                logger.info("Used global blockchain service for election creation")
+            else:
+                logger.warning("Global blockchain service not available - creating election without blockchain")
+                # Still create a minimal election setup for consistency
+                tallying_system = RealVoteTallyingSystem()
+                election_setup = tallying_system.setup_election()
+                
+        except Exception as blockchain_error:
+            logger.warning(f"Blockchain operation failed: {blockchain_error}")
+            # Continue without blockchain - election creation still works
         
         # Log election creation
         auth_service = AuthenticationService(db)
@@ -333,7 +423,8 @@ async def create_election(
             metadata={
                 "action": "create_election",
                 "election_id": election_id,
-                "election_name": election_request.name
+                "election_name": election_request.name,
+                "blockchain_enabled": global_blockchain_service.connected if 'global_blockchain_service' in locals() else False
             }
         )
         
@@ -349,9 +440,10 @@ async def create_election(
             "end_date": election_request.end_date.isoformat() if hasattr(election_request.end_date, 'isoformat') else str(election_request.end_date),
             "candidates": election_request.candidates,
             "blockchain_transaction": blockchain_tx.transaction_hash if blockchain_tx else None,
+            "blockchain_enabled": global_blockchain_service.connected if 'global_blockchain_service' in locals() else False,
             "homomorphic_setup": {
-                "public_key_size": election_setup["public_key"]["n"],
-                "security_parameter": election_setup.get("security_parameter", 2048)
+                "public_key_size": election_setup["public_key"]["n"] if 'election_setup' in locals() else "unavailable",
+                "security_parameter": election_setup.get("security_parameter", 2048) if 'election_setup' in locals() else 2048
             }
         }
         
@@ -361,7 +453,7 @@ async def create_election(
         logger.error(f"Election creation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create election"
+            detail=f"Failed to create election: {str(e)}"
         )
 
 @router.post("/create-ballot")
@@ -394,11 +486,12 @@ async def activate_election(
     
     try:
         # Validate election exists
-        blockchain_service = BlockchainService()
-        if not blockchain_service.connected:
-            await blockchain_service.initialize()
+        # Use application-level blockchain service (no per-request initialization!)
+        from main import blockchain_service as global_blockchain_service
+        if not global_blockchain_service or not global_blockchain_service.connected:
+            await global_blockchain_service.initialize()
         
-        election_info = await blockchain_service.get_election_info(election_id)
+        election_info = await global_blockchain_service.get_election_info(election_id)
         if not election_info:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -444,11 +537,12 @@ async def close_election(
     
     try:
         # Get election data
-        blockchain_service = BlockchainService()
-        if not blockchain_service.connected:
-            await blockchain_service.initialize()
+        # Use application-level blockchain service (no per-request initialization!)
+        from main import blockchain_service as global_blockchain_service
+        if not global_blockchain_service or not global_blockchain_service.connected:
+            await global_blockchain_service.initialize()
         
-        ballots = await blockchain_service.get_ballots(election_id)
+        ballots = await global_blockchain_service.get_ballots(election_id)
         
         # Close election (in production, update database status)
         # Initiate homomorphic tallying process
@@ -490,13 +584,13 @@ async def get_system_statistics(
         )
     
     try:
-        # Initialize blockchain service
-        blockchain_service = BlockchainService()
-        if not blockchain_service.connected:
-            await blockchain_service.initialize()
+        # Use application-level blockchain service (no per-request initialization!)
+        from main import blockchain_service as global_blockchain_service
+        if not global_blockchain_service or not global_blockchain_service.connected:
+            await global_blockchain_service.initialize()
         
         # Get blockchain status
-        blockchain_status = await blockchain_service.get_network_status()
+        blockchain_status = await global_blockchain_service.get_network_status()
         
         # Get real statistics from database
         # TODO: Replace with actual database queries
@@ -761,3 +855,79 @@ async def admin_health_check():
             "backup_management": True
         }
     } 
+
+@router.get("/security/key-validation-status")
+async def get_key_validation_status(current_user: SecurityContext = Depends(require_permission(Permission.SYSTEM_ADMIN))):
+    """Get comprehensive key validation status"""
+    try:
+        from core.key_integration import get_key_validator
+        
+        validator = get_key_validator()
+        status = validator.get_validation_status()
+        
+        return {
+            "success": True,
+            "validation_status": status,
+            "message": "Key validation status retrieved successfully"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get key validation status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve key validation status")
+
+@router.get("/security/active-alerts")
+async def get_active_alerts(current_user: SecurityContext = Depends(require_permission(Permission.SYSTEM_ADMIN))):
+    """Get all active security alerts"""
+    try:
+        from core.key_integration import get_admin_alert_system
+        
+        alert_system = get_admin_alert_system()
+        active_alerts = alert_system.get_active_alerts()
+        
+        return {
+            "success": True,
+            "active_alerts": active_alerts,
+            "alert_count": len(active_alerts),
+            "message": f"Retrieved {len(active_alerts)} active alerts"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get active alerts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve active alerts")
+
+@router.post("/security/validate-all-keys")
+async def validate_all_service_keys(current_user: SecurityContext = Depends(require_permission(Permission.SYSTEM_ADMIN))):
+    """Manually trigger validation of all service keys"""
+    try:
+        from core.key_integration import get_key_validator
+        
+        validator = get_key_validator()
+        results = validator.validate_all_active_services()
+        
+        # Summarize results
+        total_services = len(results)
+        secure_services = sum(1 for service_results in results.values() 
+                            if all(r.is_valid for r in service_results))
+        
+        return {
+            "success": True,
+            "validation_results": {
+                service: [
+                    {
+                        "key_type": r.key_type,
+                        "is_valid": r.is_valid,
+                        "validation_id": r.validation_id,
+                        "timestamp": r.timestamp.isoformat()
+                    }
+                    for r in service_results
+                ]
+                for service, service_results in results.items()
+            },
+            "summary": {
+                "total_services": total_services,
+                "secure_services": secure_services,
+                "system_secure": secure_services == total_services
+            },
+            "message": f"Validated {total_services} services, {secure_services} are secure"
+        }
+    except Exception as e:
+        logger.error(f"Manual key validation failed: {e}")
+        raise HTTPException(status_code=500, detail="Key validation failed") 

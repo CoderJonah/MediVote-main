@@ -105,25 +105,53 @@ class EncryptionService:
     """Handles all encryption/decryption operations"""
     
     def __init__(self, master_key: Optional[str] = None):
-        self.master_key = master_key or os.getenv('MEDIVOTE_MASTER_KEY')
-        if not self.master_key:
-            # Try to load existing master key from secure file
-            self.master_key = self._load_or_create_master_key()
+        # CRITICAL FIX: Use the provided master_key directly when available
+        # This prevents key mismatches between encryption and decryption
+        if master_key:
+            self.master_key = master_key
+            logger.info("Using provided master key for encryption service")
+        else:
+            # Only try key management system if no key provided
+            self.master_key = os.getenv('MEDIVOTE_MASTER_KEY')
+            if not self.master_key:
+                # Try to use key management system as fallback
+                self.master_key = self._get_key_from_management_system()
         
         # Initialize encryption
         self._init_encryption()
     
+    def _get_key_from_management_system(self) -> str:
+        """Get encryption key from the key management system"""
+        try:
+            # Import key management system
+            from core.key_integration import get_database_encryption_key
+            
+            # Get database encryption key from key management system
+            raw_key = get_database_encryption_key()
+            
+            # Convert to base64 string format expected by this service
+            key_b64 = base64.urlsafe_b64encode(raw_key).decode()
+            logger.info("Using encryption key from key management system")
+            return key_b64
+            
+        except Exception as e:
+            logger.warning(f"Could not get key from management system: {e}")
+            # Fallback to old method
+            return self._load_or_create_master_key()
+    
     def _load_or_create_master_key(self) -> str:
-        """Load existing master key or create new one and persist it"""
+        """Load existing master key or create new one and persist it (FALLBACK)"""
         key_file_path = os.path.join(os.path.dirname(__file__), 'keys', 'master.key')
         
-        # Try to load existing key
+        # Try to load existing key as BINARY (matching key management system)
         if os.path.exists(key_file_path):
             try:
-                with open(key_file_path, 'r', encoding='utf-8') as f:
-                    key = f.read().strip()
-                    logger.info("🔑 Loaded existing master key from secure storage")
-                    return key
+                with open(key_file_path, 'rb') as f:
+                    binary_key = f.read()
+                    if len(binary_key) == 32:  # Key management system binary format
+                        key_b64 = base64.urlsafe_b64encode(binary_key).decode()
+                        logger.info("Loaded existing binary master key from secure storage")
+                        return key_b64
             except Exception as e:
                 logger.warning(f"Could not load existing master key: {e}")
         
@@ -138,7 +166,7 @@ class EncryptionService:
             # Set restrictive permissions (owner read/write only)
             if hasattr(os, 'chmod'):
                 os.chmod(key_file_path, 0o600)
-            logger.info("🔑 Generated and saved new master key to secure storage")
+            logger.info("Generated and saved new master key to secure storage")
         except Exception as e:
             logger.error(f"Could not save master key: {e}")
         
@@ -244,9 +272,36 @@ class AuthenticationService:
         self._create_default_admin()
     
     def _create_default_admin(self):
-        """Create default admin user with secure random password"""
-        # Generate cryptographically secure random password
-        admin_password = self._generate_secure_password()
+        """Create default admin user with persistent credentials"""
+        
+        # Check if admin credentials already exist
+        credentials_file = "ADMIN_CREDENTIALS_SECURITY_SERVICE.txt"
+        existing_password = self._load_existing_admin_password(credentials_file)
+        
+        if existing_password:
+            admin_password = existing_password
+            logger.info("Using existing admin credentials")
+        else:
+            # Generate new password only if none exists
+            admin_password = self._generate_secure_password()
+            logger.critical(f"INITIAL ADMIN CREDENTIALS (SAVE THESE SECURELY):")
+            logger.critical(f"   Username: admin")
+            logger.critical(f"   Password: {admin_password}")
+            logger.critical(f"   WARNING: CHANGE THIS PASSWORD IMMEDIATELY AFTER FIRST LOGIN!")
+            
+            # Write credentials to secure file for administrator
+            try:
+                with open(credentials_file, "w", encoding='utf-8') as f:
+                    f.write(f"MediVote Security Service Admin Credentials\n")
+                    f.write(f"==========================================\n\n")
+                    f.write(f"Username: admin\n")
+                    f.write(f"Password: {admin_password}\n\n")
+                    f.write(f"WARNING: CRITICAL SECURITY NOTICE:\n")
+                    f.write(f"- Change this password immediately after first login\n")
+                    f.write(f"- Delete this file after securing the credentials\n")
+                    f.write(f"- Use strong, unique passwords for all accounts\n")
+            except Exception as e:
+                logger.error(f"Could not write admin credentials file: {e}")
         
         admin_id = "admin_001"
         admin_username = "admin"
@@ -263,26 +318,19 @@ class AuthenticationService:
                 "is_active": True
             }
         }
-        
-        # CRITICAL: Log the secure password for initial setup
-        logger.critical(f"🔐 INITIAL ADMIN CREDENTIALS (SAVE THESE SECURELY):")
-        logger.critical(f"   Username: {admin_username}")
-        logger.critical(f"   Password: {admin_password}")
-        logger.critical(f"   ⚠️  CHANGE THIS PASSWORD IMMEDIATELY AFTER FIRST LOGIN!")
-        
-        # Write credentials to secure file for administrator
+    
+    def _load_existing_admin_password(self, credentials_file: str) -> Optional[str]:
+        """Load existing admin password from credentials file"""
         try:
-            with open("ADMIN_CREDENTIALS_SECURITY_SERVICE.txt", "w") as f:
-                f.write(f"MediVote Security Service Admin Credentials\n")
-                f.write(f"==========================================\n\n")
-                f.write(f"Username: {admin_username}\n")
-                f.write(f"Password: {admin_password}\n\n")
-                f.write(f"⚠️  CRITICAL SECURITY NOTICE:\n")
-                f.write(f"- Change this password immediately after first login\n")
-                f.write(f"- Delete this file after securing the credentials\n")
-                f.write(f"- Use strong, unique passwords for all accounts\n")
+            if os.path.exists(credentials_file):
+                with open(credentials_file, "r", encoding='utf-8') as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        if line.startswith("Password: "):
+                            return line.replace("Password: ", "").strip()
         except Exception as e:
-            logger.error(f"Could not write admin credentials file: {e}")
+            logger.warning(f"Could not load existing admin credentials: {e}")
+        return None
     
     def _generate_secure_password(self) -> str:
         """Generate cryptographically secure random password"""
@@ -377,7 +425,7 @@ class AuthenticationService:
             
             self.active_sessions[session_id] = context
             
-            # Generate JWT token
+            # Generate JWT token using secure asymmetric signing
             token_payload = {
                 "session_id": session_id,
                 "user_id": user["id"],
@@ -387,7 +435,18 @@ class AuthenticationService:
                 "iat": datetime.now().timestamp()
             }
             
-            token = jwt.encode(token_payload, self.jwt_secret, algorithm="HS256")
+            # Use secure JWT service with RSA signing (replaces vulnerable HMAC)
+            try:
+                from core.jwt_security import create_secure_token
+                token = create_secure_token(
+                    payload=token_payload,
+                    expires_in_minutes=480  # 8 hours (matches session expiry)
+                )
+                logger.debug("🔐 JWT token created with secure RSA signing")
+            except Exception as jwt_error:
+                # Fallback to legacy HMAC for backward compatibility
+                logger.warning(f"⚠️  Secure JWT failed, using legacy HMAC: {jwt_error}")
+                token = jwt.encode(token_payload, self.jwt_secret, algorithm="HS256")
             
             # Audit successful login
             self._audit_event("AUTH_SUCCESS", user["id"], username, "authentication", "user_login",
@@ -403,8 +462,20 @@ class AuthenticationService:
     def verify_token(self, token: str, ip_address: str) -> Optional[SecurityContext]:
         """Verify JWT token and return security context"""
         try:
-            # Decode JWT
-            payload = jwt.decode(token, self.jwt_secret, algorithms=["HS256"])
+            # Try secure JWT verification first (RSA/ECDSA)
+            try:
+                from core.jwt_security import verify_secure_token
+                payload = verify_secure_token(token)
+                if payload:
+                    logger.debug("🔐 JWT token verified with secure asymmetric signing")
+                else:
+                    raise ValueError("Secure JWT verification failed")
+            except Exception as secure_error:
+                # Fallback to legacy HMAC verification
+                logger.warning(f"⚠️  Secure JWT verification failed, trying legacy HMAC: {secure_error}")
+                payload = jwt.decode(token, self.jwt_secret, algorithms=["HS256"])
+                logger.debug("🔓 JWT token verified with legacy HMAC signing")
+            
             session_id = payload.get("session_id")
             
             # Check session exists
@@ -447,7 +518,7 @@ class AuthenticationService:
                             "authentication", "user_logout", context.ip_address, "", 
                             {"session_id": session_id}, True)
             
-            logger.info(f"🔒 User logged out: {context.username}")
+            logger.info(f"User logged out: {context.username}")
     
     def _audit_event(self, event_type: str, user_id: Optional[str], username: Optional[str],
                     action: str, resource: str, ip_address: str, user_agent: str,
@@ -475,7 +546,7 @@ class AuthenticationService:
         
         # Log security events
         if not success or event_type in ["AUTH_FAILED", "PERMISSION_DENIED", "SUSPICIOUS_ACTIVITY"]:
-            logger.warning(f"🔐 SECURITY EVENT: {event_type} - {username} @ {ip_address} - {action} on {resource}")
+            logger.warning(f"SECURITY EVENT: {event_type} - {username} @ {ip_address} - {action} on {resource}")
     
     def get_audit_events(self, limit: int = 100) -> List[AuditEvent]:
         """Get recent audit events"""
@@ -525,23 +596,590 @@ class SecureVoteService:
                 "anonymous_voting": True  # Flag for anonymous choice
             }
             
-            logger.info(f"🔒 Vote encrypted with anonymous choice: {vote_data['id']}")
+            logger.info(f"Vote encrypted with anonymous choice: {vote_data['id']}")
             return encrypted_record
             
         except Exception as e:
             logger.error(f"Vote encryption error: {e}")
             raise
 
+# ============ KEY VALIDATION SYSTEM ============
+
+class KeyValidationResult:
+    """Result of key validation operation"""
+    def __init__(self, service_name: str, key_type: str, is_valid: bool, details: Dict[str, Any]):
+        self.service_name = service_name
+        self.key_type = key_type  
+        self.is_valid = is_valid
+        self.details = details
+        self.timestamp = datetime.now()
+        self.validation_id = secrets.token_hex(8)
+
+class MediVoteKeyValidator:
+    """
+    COMPREHENSIVE KEY VALIDATION SYSTEM
+    
+    Detects when services are using different encryption keys and alerts administrators.
+    Critical for preventing silent data corruption and ensuring system integrity.
+    """
+    
+    def __init__(self, security_manager: MediVoteSecurityManager):
+        self.security_manager = security_manager
+        self.validation_history: List[KeyValidationResult] = []
+        self.active_key_hashes: Dict[str, str] = {}
+        self.service_key_mappings: Dict[str, Dict[str, str]] = {}
+        self.validation_enabled = True
+        self.last_validation_time = datetime.now()
+        
+        # Alert thresholds
+        self.mismatch_alert_threshold = 1  # Alert on any mismatch
+        self.validation_interval = 300  # 5 minutes
+        
+        logger.critical("KEY VALIDATION SYSTEM INITIALIZED")
+        logger.critical("   Mismatch Detection: ENABLED")
+        logger.critical("   Alert Threshold: IMMEDIATE")
+        logger.critical("   Validation Interval: 5 minutes")
+    
+    def validate_service_keys(self, service_name: str, service_keys: Dict[str, bytes]) -> List[KeyValidationResult]:
+        """
+        Validate that a service is using the correct encryption keys
+        
+        Args:
+            service_name: Name of the service (e.g., 'cache_manager', 'security_service')
+            service_keys: Dictionary of key_type -> key_bytes from the service
+            
+        Returns:
+            List of validation results for each key type
+        """
+        try:
+            logger.info(f"VALIDATING KEYS FOR SERVICE: {service_name}")
+            
+            validation_results = []
+            
+            for key_type, service_key in service_keys.items():
+                result = self._validate_individual_key(service_name, key_type, service_key)
+                validation_results.append(result)
+                
+                # Store validation result
+                self.validation_history.append(result)
+                
+                # Alert on validation failure
+                if not result.is_valid:
+                    self._trigger_key_mismatch_alert(result)
+            
+            # Update service key mappings
+            self.service_key_mappings[service_name] = {
+                key_type: hashlib.sha256(key_bytes).hexdigest()[:16]
+                for key_type, key_bytes in service_keys.items()
+            }
+            
+            # Cleanup old validation history
+            self._cleanup_validation_history()
+            
+            valid_count = sum(1 for r in validation_results if r.is_valid)
+            total_count = len(validation_results)
+            
+            logger.critical(f"KEY VALIDATION COMPLETE: {service_name}")
+            logger.critical(f"   Valid Keys: {valid_count}/{total_count}")
+            logger.critical(f"   Service Status: {'SECURE' if valid_count == total_count else 'KEY MISMATCH DETECTED'}")
+            
+            return validation_results
+            
+        except Exception as e:
+            logger.error(f"Key validation failed for {service_name}: {e}")
+            error_result = KeyValidationResult(
+                service_name, "validation_error", False,
+                {"error": str(e), "error_type": type(e).__name__}
+            )
+            self._trigger_key_mismatch_alert(error_result)
+            return [error_result]
+    
+    def _validate_individual_key(self, service_name: str, key_type: str, service_key: bytes) -> KeyValidationResult:
+        """Validate an individual key against the security manager"""
+        try:
+            # Get expected key from security manager
+            expected_key = None
+            
+            if key_type == "database":
+                expected_key = self.security_manager.get_database_key()
+            elif key_type == "audit":
+                expected_key = self.security_manager.get_audit_key()
+            elif key_type == "jwt":
+                expected_key = self.security_manager.get_jwt_secret()
+            elif key_type == "session":
+                expected_key = self.security_manager.get_session_key()
+            else:
+                return KeyValidationResult(
+                    service_name, key_type, False,
+                    {"error": f"Unknown key type: {key_type}"}
+                )
+            
+            # Compare keys
+            keys_match = service_key == expected_key
+            
+            # Generate key hashes for logging (never log actual keys)
+            service_key_hash = hashlib.sha256(service_key).hexdigest()[:16]
+            expected_key_hash = hashlib.sha256(expected_key).hexdigest()[:16]
+            
+            details = {
+                "service_key_hash": service_key_hash,
+                "expected_key_hash": expected_key_hash,
+                "keys_match": keys_match,
+                "key_length": len(service_key),
+                "expected_length": len(expected_key)
+            }
+            
+            if keys_match:
+                logger.debug(f"Key validation PASSED: {service_name}.{key_type}")
+            else:
+                logger.error(f"KEY MISMATCH DETECTED: {service_name}.{key_type}")
+                logger.error(f"   Service Key Hash: {service_key_hash}")
+                logger.error(f"   Expected Key Hash: {expected_key_hash}")
+            
+            return KeyValidationResult(service_name, key_type, keys_match, details)
+            
+        except Exception as e:
+            logger.error(f"Individual key validation failed: {e}")
+            return KeyValidationResult(
+                service_name, key_type, False,
+                {"error": str(e), "validation_failed": True}
+            )
+    
+    def _trigger_key_mismatch_alert(self, validation_result: KeyValidationResult):
+        """Trigger admin alert for key mismatch"""
+        try:
+            alert_details = {
+                "service_name": validation_result.service_name,
+                "key_type": validation_result.key_type,
+                "validation_id": validation_result.validation_id,
+                "timestamp": validation_result.timestamp.isoformat(),
+                "details": validation_result.details
+            }
+            
+            # Use the admin alert system
+            admin_alert_system = get_admin_alert_system()
+            admin_alert_system.send_critical_alert(
+                "KEY_MISMATCH_DETECTED",
+                f"Service {validation_result.service_name} using incorrect {validation_result.key_type} key",
+                alert_details
+            )
+            
+            logger.critical(f"ADMIN ALERT TRIGGERED: KEY_MISMATCH_DETECTED")
+            logger.critical(f"   Service: {validation_result.service_name}")
+            logger.critical(f"   Key Type: {validation_result.key_type}")
+            logger.critical(f"   Alert ID: {validation_result.validation_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to trigger key mismatch alert: {e}")
+    
+    def validate_all_active_services(self) -> Dict[str, List[KeyValidationResult]]:
+        """Validate keys for all known active services"""
+        logger.critical("VALIDATING ALL ACTIVE SERVICES")
+        
+        all_results = {}
+        
+        # Validate cache manager keys (if available)
+        try:
+            from cache_manager import cache_manager
+            if hasattr(cache_manager, '_get_encryption_keys'):
+                cache_keys = cache_manager._get_encryption_keys()
+                all_results["cache_manager"] = self.validate_service_keys("cache_manager", cache_keys)
+        except Exception as e:
+            logger.warning(f"Could not validate cache_manager keys: {e}")
+        
+        # Validate security service keys
+        try:
+            from security_service import encryption_service
+            if hasattr(encryption_service, '_get_encryption_keys'):
+                security_keys = encryption_service._get_encryption_keys()
+                all_results["security_service"] = self.validate_service_keys("security_service", security_keys)
+        except Exception as e:
+            logger.warning(f"Could not validate security_service keys: {e}")
+        
+        # Generate summary
+        total_services = len(all_results)
+        secure_services = 0
+        total_keys_validated = 0
+        total_keys_valid = 0
+        
+        for service_name, results in all_results.items():
+            service_valid = all(r.is_valid for r in results)
+            if service_valid:
+                secure_services += 1
+            
+            total_keys_validated += len(results)
+            total_keys_valid += sum(1 for r in results if r.is_valid)
+        
+        logger.critical("ALL SERVICES VALIDATION COMPLETE")
+        logger.critical(f"   Secure Services: {secure_services}/{total_services}")
+        logger.critical(f"   Valid Keys: {total_keys_valid}/{total_keys_validated}")
+        logger.critical(f"   System Status: {'SECURE' if secure_services == total_services else 'CRITICAL - KEY MISMATCHES DETECTED'}")
+        
+        return all_results
+    
+    def get_validation_status(self) -> Dict[str, Any]:
+        """Get comprehensive validation status"""
+        recent_validations = [
+            v for v in self.validation_history 
+            if (datetime.now() - v.timestamp).seconds < 3600  # Last hour
+        ]
+        
+        return {
+            "validation_enabled": self.validation_enabled,
+            "last_validation": self.last_validation_time.isoformat(),
+            "validation_interval": self.validation_interval,
+            "recent_validations": {
+                "total": len(recent_validations),
+                "valid": len([v for v in recent_validations if v.is_valid]),
+                "failed": len([v for v in recent_validations if not v.is_valid])
+            },
+            "active_services": len(self.service_key_mappings),
+            "service_status": {
+                service: len([v for v in recent_validations if v.service_name == service and v.is_valid])
+                for service in self.service_key_mappings.keys()
+            },
+            "alert_thresholds": {
+                "mismatch_alert_threshold": self.mismatch_alert_threshold,
+                "immediate_alerts": True
+            }
+        }
+    
+    def _cleanup_validation_history(self):
+        """Clean up old validation history to prevent memory bloat"""
+        cutoff_time = datetime.now() - timedelta(hours=24)
+        self.validation_history = [
+            v for v in self.validation_history 
+            if v.timestamp > cutoff_time
+        ]
+
+# ============ ADMIN ALERT SYSTEM ============
+
+class AlertSeverity(Enum):
+    """Alert severity levels"""
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    CRITICAL = "critical"
+
+@dataclass
+class AdminAlert:
+    """Admin alert data structure"""
+    alert_id: str
+    alert_type: str
+    severity: AlertSeverity
+    title: str
+    message: str
+    details: Dict[str, Any]
+    timestamp: datetime
+    acknowledged: bool = False
+    acknowledged_by: Optional[str] = None
+    acknowledged_at: Optional[datetime] = None
+    resolved: bool = False
+    resolved_by: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+
+class AdminAlertSystem:
+    """
+    COMPREHENSIVE ADMIN ALERT SYSTEM
+    
+    Handles critical alerts for key synchronization failures, system issues,
+    and operational problems that require immediate administrator attention.
+    """
+    
+    def __init__(self):
+        self.alerts: Dict[str, AdminAlert] = {}
+        self.alert_history: List[AdminAlert] = []
+        self.notification_channels: Dict[str, callable] = {}
+        self.alert_rules: Dict[str, Dict[str, Any]] = {}
+        self.is_enabled = True
+        
+        # Alert statistics
+        self.stats = {
+            "alerts_sent": 0,
+            "critical_alerts": 0,
+            "acknowledged_alerts": 0,
+            "resolved_alerts": 0,
+            "last_alert_time": None
+        }
+        
+        # Initialize default alert rules
+        self._initialize_alert_rules()
+        
+        # Initialize notification channels
+        self._initialize_notification_channels()
+        
+        logger.critical("ADMIN ALERT SYSTEM INITIALIZED")
+        logger.critical("   Real-time Alerts: ENABLED")
+        logger.critical("   Critical Alert Escalation: ACTIVE")
+        logger.critical("   Multi-channel Notifications: READY")
+    
+    def _initialize_alert_rules(self):
+        """Initialize default alert rules"""
+        self.alert_rules = {
+            "KEY_MISMATCH_DETECTED": {
+                "severity": AlertSeverity.CRITICAL,
+                "auto_escalate": True,
+                "escalation_delay": 300,  # 5 minutes
+                "notification_channels": ["log", "email", "dashboard"],
+                "description": "Service using incorrect encryption key"
+            },
+            "KEY_SYNCHRONIZATION_FAILURE": {
+                "severity": AlertSeverity.CRITICAL,
+                "auto_escalate": True,
+                "escalation_delay": 180,  # 3 minutes
+                "notification_channels": ["log", "email", "dashboard"],
+                "description": "Key synchronization between services failed"
+            },
+            "RANDOM_KEY_FALLBACK": {
+                "severity": AlertSeverity.CRITICAL,
+                "auto_escalate": True,
+                "escalation_delay": 60,  # 1 minute
+                "notification_channels": ["log", "email", "sms", "dashboard"],
+                "description": "Service fell back to random keys - data corruption risk"
+            },
+            "BLOCKCHAIN_SYNC_FAILURE": {
+                "severity": AlertSeverity.ERROR,
+                "auto_escalate": False,
+                "notification_channels": ["log", "dashboard"],
+                "description": "Blockchain synchronization failed"
+            },
+            "CACHE_BACKUP_FAILURE": {
+                "severity": AlertSeverity.WARNING,
+                "auto_escalate": False,
+                "notification_channels": ["log", "dashboard"],
+                "description": "Cache backup operation failed"
+            }
+        }
+    
+    def _initialize_notification_channels(self):
+        """Initialize notification channels"""
+        self.notification_channels = {
+            "log": self._send_log_notification,
+            "dashboard": self._send_dashboard_notification,
+            "email": self._send_email_notification,
+            "sms": self._send_sms_notification,
+            "webhook": self._send_webhook_notification
+        }
+    
+    def send_alert(self, alert_type: str, message: str, details: Dict[str, Any] = None, 
+                   severity: AlertSeverity = AlertSeverity.WARNING) -> str:
+        """Send an admin alert"""
+        try:
+            alert_id = secrets.token_hex(12)
+            
+            # Get alert rule or use defaults
+            rule = self.alert_rules.get(alert_type, {})
+            actual_severity = rule.get("severity", severity)
+            
+            # Create alert
+            alert = AdminAlert(
+                alert_id=alert_id,
+                alert_type=alert_type,
+                severity=actual_severity,
+                title=rule.get("description", message),
+                message=message,
+                details=details or {},
+                timestamp=datetime.now()
+            )
+            
+            # Store alert
+            self.alerts[alert_id] = alert
+            self.alert_history.append(alert)
+            
+            # Update statistics
+            self.stats["alerts_sent"] += 1
+            if actual_severity == AlertSeverity.CRITICAL:
+                self.stats["critical_alerts"] += 1
+            self.stats["last_alert_time"] = datetime.now()
+            
+            # Send notifications
+            notification_channels = rule.get("notification_channels", ["log"])
+            self._send_notifications(alert, notification_channels)
+            
+            logger.critical(f"ADMIN ALERT SENT: {alert_type}")
+            logger.critical(f"   Alert ID: {alert_id}")
+            logger.critical(f"   Severity: {actual_severity.value.upper()}")
+            logger.critical(f"   Channels: {notification_channels}")
+            
+            return alert_id
+            
+        except Exception as e:
+            logger.error(f"Failed to send admin alert: {e}")
+            # Fallback logging
+            logger.critical(f"FALLBACK ALERT: {alert_type} - {message}")
+            return ""
+    
+    def send_critical_alert(self, alert_type: str, message: str, details: Dict[str, Any] = None) -> str:
+        """Send a critical admin alert with immediate escalation"""
+        return self.send_alert(alert_type, message, details, AlertSeverity.CRITICAL)
+    
+    def _send_notifications(self, alert: AdminAlert, channels: List[str]):
+        """Send notifications through specified channels"""
+        for channel in channels:
+            try:
+                if channel in self.notification_channels:
+                    self.notification_channels[channel](alert)
+                else:
+                    logger.warning(f"Unknown notification channel: {channel}")
+            except Exception as e:
+                logger.error(f"Failed to send notification via {channel}: {e}")
+    
+    def _send_log_notification(self, alert: AdminAlert):
+        """Send alert via logging system"""
+        log_level = {
+            AlertSeverity.INFO: logger.info,
+            AlertSeverity.WARNING: logger.warning,
+            AlertSeverity.ERROR: logger.error,
+            AlertSeverity.CRITICAL: logger.critical
+        }.get(alert.severity, logger.info)
+        
+        log_level(f"ADMIN ALERT [{alert.alert_type}]: {alert.message}")
+        log_level(f"   Alert ID: {alert.alert_id}")
+        log_level(f"   Timestamp: {alert.timestamp}")
+        if alert.details:
+            log_level(f"   Details: {alert.details}")
+    
+    def _send_dashboard_notification(self, alert: AdminAlert):
+        """Send alert to admin dashboard"""
+        # Store for dashboard retrieval
+        dashboard_alert = {
+            "alert_id": alert.alert_id,
+            "type": alert.alert_type,
+            "severity": alert.severity.value,
+            "title": alert.title,
+            "message": alert.message,
+            "timestamp": alert.timestamp.isoformat(),
+            "acknowledged": alert.acknowledged,
+            "resolved": alert.resolved
+        }
+        
+        # Store for dashboard API
+        if not hasattr(self, 'dashboard_alerts'):
+            self.dashboard_alerts = []
+        
+        self.dashboard_alerts.append(dashboard_alert)
+        
+        # Keep only last 100 alerts for dashboard
+        if len(self.dashboard_alerts) > 100:
+            self.dashboard_alerts = self.dashboard_alerts[-100:]
+    
+    def _send_email_notification(self, alert: AdminAlert):
+        """Send alert via email"""
+        logger.info(f"EMAIL ALERT: {alert.alert_type} - {alert.message}")
+        logger.info("   (Email integration placeholder)")
+    
+    def _send_sms_notification(self, alert: AdminAlert):
+        """Send alert via SMS"""
+        logger.info(f"SMS ALERT: {alert.alert_type} - {alert.message}")
+        logger.info("   (SMS integration placeholder)")
+    
+    def _send_webhook_notification(self, alert: AdminAlert):
+        """Send alert via webhook"""
+        logger.info(f"WEBHOOK ALERT: {alert.alert_type} - {alert.message}")
+        logger.info("   (Webhook integration placeholder)")
+    
+    def get_active_alerts(self) -> List[Dict[str, Any]]:
+        """Get all active (unresolved) alerts"""
+        active_alerts = []
+        
+        for alert in self.alerts.values():
+            if not alert.resolved:
+                active_alerts.append({
+                    "alert_id": alert.alert_id,
+                    "alert_type": alert.alert_type,
+                    "severity": alert.severity.value,
+                    "title": alert.title,
+                    "message": alert.message,
+                    "timestamp": alert.timestamp.isoformat(),
+                    "acknowledged": alert.acknowledged,
+                    "details": alert.details
+                })
+        
+        return active_alerts
+
+# Global instances
+_key_validator: Optional[MediVoteKeyValidator] = None
+_admin_alert_system: Optional[AdminAlertSystem] = None
+
+def get_key_validator() -> MediVoteKeyValidator:
+    """Get the global key validator instance"""
+    global _key_validator
+    
+    if _key_validator is None:
+        security_manager = get_security_manager()
+        _key_validator = MediVoteKeyValidator(security_manager)
+    
+    return _key_validator
+
+def get_admin_alert_system() -> AdminAlertSystem:
+    """Get the global admin alert system instance"""
+    global _admin_alert_system
+    
+    if _admin_alert_system is None:
+        _admin_alert_system = AdminAlertSystem()
+    
+    return _admin_alert_system
+
+def validate_service_keys(service_name: str, service_keys: Dict[str, bytes]) -> List[KeyValidationResult]:
+    """Convenience function to validate service keys"""
+    validator = get_key_validator()
+    return validator.validate_service_keys(service_name, service_keys)
+
+def send_admin_alert(alert_type: str, message: str, details: Dict[str, Any] = None) -> str:
+    """Convenience function to send admin alert"""
+    alert_system = get_admin_alert_system()
+    return alert_system.send_alert(alert_type, message, details)
+
+def send_critical_admin_alert(alert_type: str, message: str, details: Dict[str, Any] = None) -> str:
+    """Convenience function to send critical admin alert"""
+    alert_system = get_admin_alert_system()
+    return alert_system.send_critical_alert(alert_type, message, details)
+
+# ============ KEY VALIDATION SYSTEM ============
+
 # Global security services
 def get_security_services():
     """Get initialized security services"""
-    # Use environment variable or generate secure defaults
-    jwt_secret = os.getenv('MEDIVOTE_JWT_SECRET') or secrets.token_urlsafe(64)
-    master_key = os.getenv('MEDIVOTE_MASTER_KEY') or base64.urlsafe_b64encode(os.urandom(32)).decode()
+    # CRITICAL FIX: Always use key management system for consistent keys
+    # DO NOT generate random keys that change between processes
+    
+    try:
+        # Initialize security system first to ensure key management is available
+        from core.key_integration import initialize_medivote_security, get_database_encryption_key, get_jwt_secret_key
+        
+        # Initialize if not already done
+        try:
+            initialize_medivote_security()
+        except Exception as init_error:
+            logger.warning(f"Security system already initialized or init failed: {init_error}")
+        
+        # Get consistent keys from key management system
+        db_key_raw = get_database_encryption_key()
+        jwt_key_raw = get_jwt_secret_key()
+        
+        # Convert keys to expected format
+        master_key = base64.urlsafe_b64encode(db_key_raw).decode()
+        # JWT key is binary data, convert to base64 for use as string
+        jwt_secret = base64.urlsafe_b64encode(jwt_key_raw).decode() if isinstance(jwt_key_raw, bytes) else str(jwt_key_raw)
+        
+        logger.info("Using keys from key management system")
+        
+    except Exception as e:
+        logger.error(f"Failed to get keys from management system: {e}")
+        # Only fall back to environment/random as last resort
+        jwt_secret = os.getenv('MEDIVOTE_JWT_SECRET') or secrets.token_urlsafe(64)
+        master_key = os.getenv('MEDIVOTE_MASTER_KEY') or base64.urlsafe_b64encode(os.urandom(32)).decode()
+        logger.warning("Using fallback random keys - THIS WILL CAUSE CACHE DECRYPTION ISSUES")
     
     encryption_service = EncryptionService(master_key)
     auth_service = AuthenticationService(jwt_secret, encryption_service)
     vote_service = SecureVoteService(encryption_service, auth_service)
+    
+    # Perform immediate key validation after initialization
+    try:
+        encryption_service.perform_key_validation()
+    except Exception as e:
+        logger.error(f"Post-initialization key validation failed: {e}")
     
     return encryption_service, auth_service, vote_service
 

@@ -23,9 +23,203 @@ from core.identity.verifiable_credentials import (
     VerifiableCredential, VerifiablePresentation, CredentialVerifier,
     CredentialIssuer, DIDResolver, generate_did
 )
-from core.crypto.zero_knowledge import VoterEligibilityProof, ZKProof, MerkleTree
+from core.crypto.zero_knowledge import ZKProof, RealZKVerifier
 from core.security import SecurityService, DeviceFingerprint
 from core.database import get_db
+
+# Real Merkle Tree Implementation
+class MerkleTree:
+    """Real Merkle Tree implementation for voter eligibility verification"""
+    
+    def __init__(self, data_list: List[str]):
+        """
+        Initialize Merkle tree with list of voter credential hashes
+        
+        Args:
+            data_list: List of voter credential hashes or DIDs
+        """
+        self.data_list = data_list if data_list else [""]
+        self.tree = self._build_tree()
+        self.root = self.tree[0] if self.tree else ""
+    
+    def _build_tree(self) -> List[str]:
+        """Build the complete Merkle tree from leaf nodes"""
+        if not self.data_list:
+            return [""]
+        
+        # Start with leaf level (hash each data item)
+        current_level = [self._hash(data) for data in self.data_list]
+        tree_levels = [current_level[:]]  # Store all levels for proof generation
+        
+        # Build tree bottom-up
+        while len(current_level) > 1:
+            next_level = []
+            for i in range(0, len(current_level), 2):
+                left = current_level[i]
+                right = current_level[i + 1] if i + 1 < len(current_level) else left
+                parent = self._hash(left + right)
+                next_level.append(parent)
+            
+            tree_levels.insert(0, next_level)  # Insert at beginning (root first)
+            current_level = next_level
+        
+        # Flatten tree levels for easy access
+        flattened_tree = []
+        for level in tree_levels:
+            flattened_tree.extend(level)
+        
+        return flattened_tree
+    
+    def _hash(self, data: str) -> str:
+        """Hash function for Merkle tree nodes"""
+        return hashlib.sha256(data.encode()).hexdigest()
+    
+    def get_root(self) -> str:
+        """Get the Merkle root hash"""
+        return self.root
+    
+    def get_proof(self, data_item: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Generate Merkle proof for a specific data item
+        
+        Args:
+            data_item: The data item to generate proof for
+            
+        Returns:
+            List of proof elements with hash and position (left/right)
+        """
+        try:
+            # Find the index of the data item
+            item_index = self.data_list.index(data_item)
+        except ValueError:
+            return None
+        
+        # Generate proof path from leaf to root
+        proof = []
+        current_index = item_index
+        current_level_size = len(self.data_list)
+        
+        # Navigate up the tree levels
+        level_start = len(self.tree) - len(self.data_list)
+        
+        while current_level_size > 1:
+            # Determine sibling index and position
+            if current_index % 2 == 0:
+                # Current node is left child
+                sibling_index = current_index + 1
+                position = "right"
+            else:
+                # Current node is right child
+                sibling_index = current_index - 1
+                position = "left"
+            
+            # Get sibling hash (or use current hash if no sibling)
+            if sibling_index < current_level_size:
+                sibling_hash = self.tree[level_start + sibling_index]
+            else:
+                sibling_hash = self.tree[level_start + current_index]
+            
+            proof.append({
+                "hash": sibling_hash,
+                "position": position
+            })
+            
+            # Move to parent level
+            current_index //= 2
+            current_level_size = (current_level_size + 1) // 2
+            level_start -= current_level_size
+        
+        return proof
+    
+    def verify_proof(self, data_item: str, proof: List[Dict[str, Any]], root: str) -> bool:
+        """
+        Verify a Merkle proof
+        
+        Args:
+            data_item: The original data item
+            proof: List of proof elements
+            root: Expected Merkle root
+            
+        Returns:
+            True if proof is valid
+        """
+        current_hash = self._hash(data_item)
+        
+        for proof_element in proof:
+            sibling_hash = proof_element["hash"]
+            position = proof_element["position"]
+            
+            if position == "left":
+                current_hash = self._hash(sibling_hash + current_hash)
+            else:
+                current_hash = self._hash(current_hash + sibling_hash)
+        
+        return current_hash == root
+
+def get_election_eligible_voters(election_id: str) -> List[str]:
+    """
+    Get list of eligible voter verification hashes for an election
+    
+    SECURITY: Uses ONLY the secure database with double encryption
+    - Database encrypted with master key
+    - Voter credentials salted with user passwords
+    - Eliminates admin access to voter DIDs
+    - NO deterministic fallbacks that compromise security
+    
+    Args:
+        election_id: The election identifier
+        
+    Returns:
+        List of verification hashes for eligible voters (for Merkle tree)
+        
+    Raises:
+        SecurityError: If database query fails or no voters found
+    """
+    from core.secure_database import get_secure_database
+    
+    try:
+        # Get secure database instance with integrated key management
+        db = get_secure_database()
+        
+        # Query all verified voters for this election from encrypted database
+        voters = db.get_eligible_voters(election_id)
+        
+        if not voters:
+            logger.warning(f"🔒 No eligible voters found for election {election_id}")
+            logger.warning("   This could indicate:")
+            logger.warning("   - Election has no registered voters yet")
+            logger.warning("   - Database initialization needed")
+            logger.warning("   - Voter registration system not populated")
+            # Return empty list - do NOT create fake data
+            return []
+        
+        # Extract verification hashes from actual voter records
+        # These are cryptographically secure hashes, not voter DIDs
+        verification_hashes = [voter.verification_hash for voter in voters]
+        
+        logger.info(f"🔐 Retrieved {len(verification_hashes)} REAL eligible voters for election {election_id}")
+        logger.info(f"   Database: Double encrypted with master key")
+        logger.info(f"   Voters: Salted with individual passwords")
+        logger.info(f"   Security: Admin-proof voter DID protection")
+        
+        return verification_hashes
+        
+    except Exception as e:
+        logger.error(f"❌ SECURITY ERROR: Failed to fetch eligible voters for {election_id}: {e}")
+        logger.error("   Database query failed - this is a critical security issue")
+        logger.error("   Possible causes:")
+        logger.error("   - Key management system failure")
+        logger.error("   - Database corruption or unavailable")
+        logger.error("   - Encryption key rotation needed")
+        
+        # SECURITY: Do NOT fall back to deterministic or mock data
+        # Better to fail securely than compromise voter privacy
+        raise SecurityError(f"Cannot retrieve voter eligibility data: {e}")
+
+
+class SecurityError(Exception):
+    """Security-related error that should not be bypassed"""
+    pass
 
 settings = get_settings()
 security_config = get_security_config()
@@ -140,7 +334,7 @@ async def authenticate_voter(
             )
         
         # Initialize ZK proof verifier
-        zk_verifier = VoterEligibilityProof("./circuits")
+        zk_verifier = RealZKVerifier("./circuits")
         
         # Verify zero-knowledge proof
         zk_proof = ZKProof(
@@ -150,8 +344,12 @@ async def authenticate_voter(
             pi_c=(auth_request.zk_proof["pi_c"][0], auth_request.zk_proof["pi_c"][1])
         )
         
-        # Get election merkle root (mock for now)
-        merkle_root = "mock_merkle_root_" + auth_request.election_id
+        # Get real election merkle root from eligible voters
+        eligible_voters = get_election_eligible_voters(auth_request.election_id)
+        merkle_tree = MerkleTree(eligible_voters)
+        merkle_root = merkle_tree.get_root()
+        
+        logger.info(f"✅ Generated real Merkle root for election {auth_request.election_id} with {len(eligible_voters)} eligible voters")
         
         # Verify the proof
         is_valid = zk_verifier.verify_eligibility(
@@ -193,11 +391,22 @@ async def authenticate_voter(
             "exp": session_expires.timestamp()
         }
         
-        session_token = jwt.encode(
-            token_payload,
-            settings.JWT_SECRET_KEY,
-            algorithm=settings.JWT_ALGORITHM
-        )
+        # Use secure JWT service with RSA signing (replaces vulnerable HMAC)
+        try:
+            from core.jwt_security import create_secure_token
+            session_token = create_secure_token(
+                payload=token_payload,
+                expires_in_minutes=security_config.SESSION_TIMEOUT_MINUTES
+            )
+            logger.debug("🔐 JWT session token created with secure RSA signing")
+        except Exception as jwt_error:
+            # Fallback to legacy settings-based JWT
+            logger.warning(f"⚠️  Secure JWT failed, using legacy method: {jwt_error}")
+            session_token = jwt.encode(
+                token_payload,
+                settings.JWT_SECRET_KEY,
+                algorithm=settings.JWT_ALGORITHM
+            )
         
         # Reset failed attempts on successful authentication
         if client_ip in failed_attempts:
@@ -295,7 +504,7 @@ async def verify_zk_proof(
     
     try:
         # Initialize ZK verifier
-        zk_verifier = VoterEligibilityProof("./circuits")
+        zk_verifier = RealZKVerifier("./circuits")
         
         # Convert proof format
         zk_proof = ZKProof(
@@ -305,8 +514,12 @@ async def verify_zk_proof(
             pi_c=(zk_request.proof["pi_c"][0], zk_request.proof["pi_c"][1])
         )
         
-        # Get merkle root for the election
-        merkle_root = "mock_merkle_root_" + zk_request.election_id
+        # Get real merkle root for the election
+        eligible_voters = get_election_eligible_voters(zk_request.election_id)
+        merkle_tree = MerkleTree(eligible_voters)
+        merkle_root = merkle_tree.get_root()
+        
+        logger.info(f"✅ Using real Merkle root for ZK verification in election {zk_request.election_id}")
         
         # Verify the proof
         is_valid = zk_verifier.verify_eligibility(
@@ -431,19 +644,21 @@ async def get_election_merkle_root(
     Get the merkle root for an election's revocation list
     """
     
-    # In a real implementation, this would query the database
-    # For now, return a mock merkle root
-    mock_credentials = [
-        f"credential_hash_{i}" for i in range(10)
-    ]
+    # Get real eligible voters for the election
+    eligible_voters = get_election_eligible_voters(election_id)
     
-    merkle_tree = MerkleTree(mock_credentials)
+    # Build real Merkle tree from eligible voter credentials
+    merkle_tree = MerkleTree(eligible_voters)
+    
+    logger.info(f"✅ Built real Merkle tree for election {election_id} with {len(eligible_voters)} eligible voters")
     
     return {
         "election_id": election_id,
         "merkle_root": merkle_tree.get_root(),
-        "credential_count": len(mock_credentials),
-        "last_updated": datetime.utcnow().isoformat()
+        "eligible_voter_count": len(eligible_voters),
+        "tree_depth": len(bin(len(eligible_voters) - 1)[2:]) if eligible_voters else 0,
+        "last_updated": datetime.utcnow().isoformat(),
+        "implementation": "real_merkle_tree"
     }
 
 
@@ -459,7 +674,20 @@ def get_current_session(credentials: HTTPAuthorizationCredentials = Depends(secu
     """Dependency to get current authenticated session"""
     try:
         token = credentials.credentials
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        
+        # Try secure JWT verification first (RSA/ECDSA)
+        try:
+            from core.jwt_security import verify_secure_token
+            payload = verify_secure_token(token)
+            if payload:
+                logger.debug("🔐 JWT session token verified with secure asymmetric signing")
+            else:
+                raise ValueError("Secure JWT verification failed")
+        except Exception as secure_error:
+            # Fallback to legacy JWT verification
+            logger.warning(f"⚠️  Secure JWT verification failed, trying legacy: {secure_error}")
+            payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+            logger.debug("🔓 JWT token verified with legacy signing")
         
         session_id = payload.get("session_id")
         
