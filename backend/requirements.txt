@@ -32,6 +32,7 @@ PyJWT==2.8.0
 slowapi==0.1.9  # Legacy rate limiting (replaced by secure rate limiter)
 # Note: Secure rate limiter uses existing redis, sqlalchemy, and cryptography dependencies
 user-agents==2.2.0  # User agent parsing
+bleach==6.1.0  # HTML sanitization for input validation
 
 # Testing and Development
 pytest==7.4.3
@@ -39,6 +40,7 @@ pytest-asyncio==0.21.1
 pytest-cov==4.1.0
 httpx==0.25.2
 faker==20.1.0
+freezegun==1.2.2  # For time mocking in tests
 
 # Utilities
 python-dotenv==1.0.0
