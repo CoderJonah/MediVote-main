@@ -291,8 +291,10 @@ class SessionInfo(BaseModel):
     eligibility_verified: bool
 
 
-# In-memory session storage (in production, use Redis or database)
-active_sessions: Dict[str, SessionInfo] = {}
+# Redis-based session storage for production scalability
+from ..core.session_manager import get_session_manager, SessionData
+
+# Legacy support - will be replaced by Redis sessions
 failed_attempts: Dict[str, int] = {}
 
 
@@ -365,23 +367,24 @@ async def authenticate_voter(
                 detail="Invalid eligibility proof"
             )
         
-        # Create authenticated session
-        session_id = str(uuid.uuid4())
-        session_expires = datetime.utcnow() + timedelta(minutes=security_config.SESSION_TIMEOUT_MINUTES)
+        # Create authenticated session using Redis
+        session_manager = await get_session_manager()
+        device_fingerprint_hash = hashlib.sha256(
+            json.dumps(auth_request.device_fingerprint, sort_keys=True).encode()
+        ).hexdigest()
         
-        session_info = SessionInfo(
-            session_id=session_id,
-            voter_did=auth_request.did,
-            election_id=auth_request.election_id,
-            authenticated_at=datetime.utcnow(),
-            expires_at=session_expires,
-            device_fingerprint=hashlib.sha256(
-                json.dumps(auth_request.device_fingerprint, sort_keys=True).encode()
-            ).hexdigest(),
-            eligibility_verified=True
+        session_id, session_data = await session_manager.create_session(
+            user_id=auth_request.did,
+            username=auth_request.did,  # Using DID as username for voters
+            role="voter",
+            permissions=["vote", "verify_ballot"],
+            ip_address=client_ip,
+            user_agent=request.headers.get("user-agent", "unknown"),
+            mfa_verified=True,  # ZK proof acts as MFA for voters
+            device_fingerprint=device_fingerprint_hash
         )
         
-        active_sessions[session_id] = session_info
+        session_expires = session_data.expires_at
         
         # Generate JWT token
         token_payload = {
@@ -560,9 +563,9 @@ async def logout_voter(
         
         session_id = payload.get("session_id")
         
-        # Remove session
-        if session_id in active_sessions:
-            del active_sessions[session_id]
+        # Remove session from Redis
+        session_manager = await get_session_manager()
+        await session_manager.revoke_session(session_id)
         
         return {"message": "Logged out successfully"}
         
@@ -595,30 +598,27 @@ async def get_session_info(
         
         session_id = payload.get("session_id")
         
-        # Check session exists and is valid
-        if session_id not in active_sessions:
+        # Check session exists and is valid using Redis
+        session_manager = await get_session_manager()
+        session_data = await session_manager.get_session(session_id)
+        
+        if not session_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Session not found"
+                detail="Session not found or expired"
             )
         
-        session_info = active_sessions[session_id]
-        
-        # Check expiration
-        if datetime.utcnow() > session_info.expires_at:
-            del active_sessions[session_id]
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Session expired"
-            )
+        # Session is automatically validated by session manager
+        # Extract election_id from JWT token since it's stored there
+        election_id = payload.get("election_id", "")
         
         return {
-            "session_id": session_info.session_id,
-            "voter_did": session_info.voter_did,
-            "election_id": session_info.election_id,
-            "authenticated_at": session_info.authenticated_at.isoformat(),
-            "expires_at": session_info.expires_at.isoformat(),
-            "eligibility_verified": session_info.eligibility_verified
+            "session_id": session_data.session_id,
+            "voter_did": session_data.user_id,
+            "election_id": election_id,
+            "authenticated_at": session_data.created_at.isoformat(),
+            "expires_at": session_data.expires_at.isoformat(),
+            "eligibility_verified": session_data.mfa_verified  # ZK proof verification
         }
         
     except jwt.ExpiredSignatureError:
@@ -691,20 +691,27 @@ def get_current_session(credentials: HTTPAuthorizationCredentials = Depends(secu
         
         session_id = payload.get("session_id")
         
-        if session_id not in active_sessions:
+        # Check session using Redis
+        session_manager = await get_session_manager()
+        session_data = await session_manager.get_session(session_id)
+        
+        if not session_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Session not found"
+                detail="Session not found or expired"
             )
         
-        session_info = active_sessions[session_id]
-        
-        if datetime.utcnow() > session_info.expires_at:
-            del active_sessions[session_id]
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Session expired"
-            )
+        # Create compatibility object for existing code
+        from types import SimpleNamespace
+        session_info = SimpleNamespace(
+            session_id=session_data.session_id,
+            voter_did=session_data.user_id,
+            election_id=payload.get("election_id", ""),
+            authenticated_at=session_data.created_at,
+            expires_at=session_data.expires_at,
+            device_fingerprint=session_data.device_fingerprint,
+            eligibility_verified=session_data.mfa_verified
+        )
         
         return session_info
         
@@ -724,10 +731,18 @@ def get_current_session(credentials: HTTPAuthorizationCredentials = Depends(secu
 @router.get("/health")
 async def auth_health_check():
     """Health check for authentication service"""
+    # Get session statistics from Redis
+    try:
+        session_manager = await get_session_manager()
+        session_stats = await session_manager.get_session_stats()
+    except:
+        session_stats = {"active_sessions": 0, "redis_connected": False}
+    
     return {
         "status": "healthy",
         "service": "authentication",
-        "active_sessions": len(active_sessions),
+        "active_sessions": session_stats.get("active_sessions", 0),
+        "redis_connected": session_stats.get("redis_connected", False),
         "features": {
             "zk_proofs": True,
             "verifiable_credentials": True,
