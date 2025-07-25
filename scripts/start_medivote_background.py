@@ -2422,7 +2422,7 @@ class MediVoteBackgroundManager:
             if (h3) {{
                 // Get the service name from the h3 text content
                 const currentText = h3.textContent;
-                const serviceName = currentText.replace(/^[●○]\s*/, ''); // Remove existing icon
+                const serviceName = currentText.replace(/^[●○]\\s*/, ''); // Remove existing icon
                 
                 // Update with new icon and preserved name
                 const newIcon = serviceData.status === 'running' ? '● ' : '○ ';

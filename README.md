@@ -49,14 +49,22 @@ cd medivote
 
 ### 2. Start the Application
 ```bash
-# Option 1: Use the quick start script
+# Option 1: Use the recommended start script (with virtual environment)
 ./start.sh
 
-# Option 2: Manual start
+# Option 2: Use simple start script (system-wide installation)
+./start-simple.sh
+
+# Option 3: Manual start
 cd src/backend
-pip install -r requirements.txt
+pip install -r requirements.txt --break-system-packages
 cd ../..
-python scripts/start_medivote_background.py
+python3 scripts/start_medivote_background.py
+```
+
+**Note**: If you get a virtual environment error, use `start-simple.sh` or install python3-venv:
+```bash
+sudo apt install python3-venv
 ```
 
 ### 3. Access the Application

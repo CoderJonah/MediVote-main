@@ -1,0 +1,6 @@
+# System-level dependencies for MediVote service manager
+# These are needed for the startup scripts and service orchestration
+
+psutil==5.9.6
+aiohttp==3.9.1
+asyncio-mqtt==0.13.0
