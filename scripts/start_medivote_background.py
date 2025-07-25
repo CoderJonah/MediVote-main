@@ -92,7 +92,7 @@ class MediVoteBackgroundManager:
         self.service_configs = {
             "backend": {
                 "name": "MediVote Backend",
-                "command": ["python", "src/backend/main.py"],
+                "command": ["python3", "src/backend/main.py"],
                 "port": 8001,
                 "dashboard_port": 8091,
                 "auto_restart": True,
@@ -102,7 +102,7 @@ class MediVoteBackgroundManager:
             },
             "blockchain_node": {
                 "name": "Blockchain Node",
-                "command": ["python", "blockchain_node.py", "--config", "node_config_1.json"],
+                "command": ["python3", "scripts/blockchain_node.py", "--config", "config/node_config_1.json"],
                 "port": 8546,
                 "dashboard_port": 8093,
                 "auto_restart": True,
@@ -113,7 +113,7 @@ class MediVoteBackgroundManager:
 
             "network_coordinator": {
                 "name": "Network Coordinator",
-                "command": ["python", "network_coordinator.py"],
+                "command": ["python3", "scripts/network_coordinator.py"],
                 "port": 8083,
                 "dashboard_port": 8096,
                 "auto_restart": True,
@@ -123,7 +123,7 @@ class MediVoteBackgroundManager:
             },
             "network_dashboard": {
                 "name": "Network Dashboard",
-                "command": ["python", "network_dashboard.py"],
+                "command": ["python3", "scripts/network_dashboard.py"],
                 "port": 8084,
                 "dashboard_port": 8097,
                 "auto_restart": True,
@@ -133,7 +133,7 @@ class MediVoteBackgroundManager:
             },
             "frontend": {
                 "name": "MediVote Frontend",
-                "command": ["python", "src/frontend/serve.py"],
+                "command": ["python3", "src/frontend/serve.py"],
                 "port": 8080,
                 "dashboard_port": 8098,
                 "auto_restart": True,

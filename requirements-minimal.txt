@@ -1,0 +1,39 @@
+# Minimal Requirements - Essential dependencies only
+# This file contains only the core dependencies needed to run MediVote
+# without heavy compilation requirements
+
+# Core Web Framework
+fastapi>=0.100.0
+uvicorn>=0.20.0
+python-multipart>=0.0.5
+pydantic>=2.0.0
+
+# Database
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+
+# Basic Cryptography (pre-compiled wheels available)
+cryptography>=40.0.0
+
+# Utilities
+requests>=2.28.0
+python-dotenv>=0.19.0
+click>=8.0.0
+aiofiles>=22.0.0
+
+# Service Management
+psutil>=5.9.0
+aiohttp>=3.8.0
+
+# Authentication
+PyJWT>=2.6.0
+passlib>=1.7.0
+
+# Input Validation
+bleach>=6.0.0
+
+# Redis (optional - will work without if not available)
+redis>=4.0.0
+
+# JSON handling
+jsonschema>=4.0.0

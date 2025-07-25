@@ -11,12 +11,13 @@ redis==5.0.1
 # Cryptographic Libraries
 phe==1.5.0  # Paillier homomorphic encryption
 cryptography==41.0.7
-coincurve==18.0.0  # Elliptic curve cryptography
+# Use pre-compiled wheel versions to avoid compilation issues
+coincurve>=17.0.0  # Elliptic curve cryptography (flexible version)
 py-ecc==6.0.0  # Ethereum cryptography
 
-# Scientific Computing
-numpy==1.24.3
-scipy==1.11.4
+# Scientific Computing - use pre-compiled versions
+numpy>=1.21.0,<2.0.0  # Flexible numpy version
+scipy>=1.7.0,<2.0.0   # Flexible scipy version
 
 # JSON Schema validation
 jsonschema==4.20.0
@@ -57,4 +58,8 @@ aiosqlite==0.19.0
 requests==2.31.0
 async-timeout==4.0.3
 pytz==2023.3
-psutil==5.9.6 
+psutil==5.9.6
+
+# Build dependencies (to avoid compilation errors)
+setuptools>=60.0.0
+wheel>=0.37.0 

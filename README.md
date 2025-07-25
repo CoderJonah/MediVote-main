@@ -38,7 +38,7 @@ medivote/
 
 ### Prerequisites
 - Python 3.9+
-- Node.js 16+
+- Node.js 16+ (optional)
 - Git
 
 ### 1. Clone and Setup
@@ -47,25 +47,32 @@ git clone https://github.com/the-median/medivote.git
 cd medivote
 ```
 
-### 2. Start the Application
+### 2. Install System Dependencies (if needed)
 ```bash
-# Option 1: Use the recommended start script (with virtual environment)
-./start.sh
+# For Ubuntu/Debian systems, install build dependencies:
+./install-system-deps.sh
 
-# Option 2: Use simple start script (system-wide installation)
+# Or manually:
+sudo apt install python3-dev python3-pip python3-venv build-essential libffi-dev libssl-dev
+```
+
+### 3. Start the Application
+```bash
+# Option 1: Simple start (recommended for development)
 ./start-simple.sh
 
+# Option 2: With virtual environment (recommended for production)
+./start.sh
+
 # Option 3: Manual start
-cd src/backend
-pip install -r requirements.txt --break-system-packages
-cd ../..
+python3 -m pip install psutil aiohttp --break-system-packages
 python3 scripts/start_medivote_background.py
 ```
 
-**Note**: If you get a virtual environment error, use `start-simple.sh` or install python3-venv:
-```bash
-sudo apt install python3-venv
-```
+**Troubleshooting**:
+- If you get compilation errors, run `./install-system-deps.sh` first
+- If virtual environment fails, use `./start-simple.sh`
+- For missing dependencies, see the error messages for specific installation commands
 
 ### 3. Access the Application
 - **Frontend**: http://localhost:8080

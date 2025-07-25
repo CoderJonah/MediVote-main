@@ -38,6 +38,31 @@ SyntaxWarning: invalid escape sequence '\s'
 - ✅ Fixed escape sequence in `scripts/start_medivote_background.py`
 - ✅ Changed `/^[●○]\s*/` to `/^[●○]\\s*/` (double backslash for Python string)
 
+### 4. **Compilation Errors**
+```
+ERROR: Exception:
+pip._vendor.pyproject_hooks._impl.BackendUnavailable: Cannot import 'setuptools.build_meta'
+```
+
+**Cause**: Missing build dependencies for compiling packages like `numpy` and `coincurve`.
+
+**Solution**:
+- ✅ Created flexible version requirements to avoid compilation
+- ✅ Added `requirements-minimal.txt` with pre-compiled packages only
+- ✅ Created `install-system-deps.sh` to install build dependencies
+- ✅ Updated startup scripts with fallback installation strategies
+
+### 5. **Python Command Not Found**
+```
+ERROR - Command not found: python
+```
+
+**Cause**: Service manager was looking for `python` instead of `python3`.
+
+**Solution**:
+- ✅ Updated all service commands to use `python3` instead of `python`
+- ✅ Fixed path references for moved scripts and config files
+
 ## 🚀 Solutions Implemented
 
 ### **Enhanced Startup Scripts**
@@ -50,13 +75,19 @@ SyntaxWarning: invalid escape sequence '\s'
 
 2. **`start-simple.sh`** (Fallback):
    - Uses system Python with `--break-system-packages`
-   - Faster startup, no virtual environment overhead
-   - Good for development environments
+   - Tries minimal dependencies first, then full requirements
+   - Comprehensive error handling with troubleshooting tips
+   - Automatic fallback strategies
 
 3. **`test-setup.sh`** (Diagnostic):
    - Tests system requirements
    - Validates directory structure
    - Checks Python script syntax
+
+4. **`install-system-deps.sh`** (System Setup):
+   - Automatically detects OS (Ubuntu/Debian/CentOS/Alpine)
+   - Installs build dependencies needed for compilation
+   - Cross-platform compatibility
 
 ### **Dependency Management**
 
@@ -67,27 +98,49 @@ SyntaxWarning: invalid escape sequence '\s'
    asyncio-mqtt==0.13.0
    ```
 
-2. **Updated `src/backend/requirements.txt`**:
+2. **`requirements-minimal.txt`**:
+   - Only essential dependencies with pre-compiled wheels
+   - Avoids compilation issues
+   - Fast installation
+
+3. **Updated `src/backend/requirements.txt`**:
    - Added `psutil==5.9.6` for service manager
+   - Flexible version ranges to avoid compilation issues
+   - Build dependencies included
+
+### **Service Manager Fixes**
+
+1. **Command Updates**:
+   - Changed all `python` commands to `python3`
+   - Updated script paths to use new directory structure
+   - Fixed config file paths
+
+2. **Path Corrections**:
+   - `src/backend/main.py` instead of `backend/main.py`
+   - `scripts/` prefix for standalone scripts
+   - `config/` prefix for configuration files
 
 ### **Documentation Updates**
 
 1. **`README.md`**:
-   - Added multiple startup options
-   - Included troubleshooting for virtual environment issues
-   - Clear instructions for dependency installation
+   - Added system dependency installation step
+   - Multiple startup options with troubleshooting
+   - Clear instructions for different scenarios
 
 2. **Error handling messages**:
-   - Clear error messages with suggested solutions
-   - Step-by-step troubleshooting guides
+   - Detailed troubleshooting guides
+   - OS-specific installation commands
+   - Step-by-step problem resolution
 
 ## 🔍 Verification
 
 ### ✅ All Issues Resolved
 
 - **Virtual Environment**: ✅ Handled gracefully with fallback options
-- **Missing Dependencies**: ✅ Added to requirements files
+- **Missing Dependencies**: ✅ Added to requirements files with fallback strategies
 - **Syntax Warning**: ✅ Fixed escape sequence
+- **Compilation Errors**: ✅ Resolved with minimal dependencies and build tools
+- **Python Commands**: ✅ Updated to use python3 consistently
 - **User Experience**: ✅ Clear error messages and multiple startup options
 
 ### 🧪 Testing
@@ -101,21 +154,26 @@ Run the diagnostic script to verify everything works:
 
 Choose your preferred method:
 ```bash
-# Recommended (with virtual environment)
-./start.sh
+# 1. Install system dependencies first (recommended)
+./install-system-deps.sh
 
-# Simple (system-wide installation)
+# 2. Simple start (system-wide installation)
 ./start-simple.sh
+
+# 3. With virtual environment (after installing python3-venv)
+./start.sh
 ```
 
 ## 📊 Impact
 
-- **Compatibility**: ✅ Works on systems with/without python3-venv
+- **Compatibility**: ✅ Works on systems with/without build tools and python3-venv
 - **Security**: ✅ Virtual environment isolation when available
-- **User Experience**: ✅ Clear instructions and error handling
-- **Maintainability**: ✅ Proper dependency management
-- **Functionality**: ✅ All original features preserved
+- **User Experience**: ✅ Clear instructions and error handling for all scenarios
+- **Maintainability**: ✅ Proper dependency management with multiple fallback strategies
+- **Functionality**: ✅ All original features preserved with improved reliability
 
 ---
 
-**🎉 Result**: The MediVote application now starts successfully on various system configurations with proper error handling and user guidance!
+**🎉 Result**: The MediVote application now starts successfully on various system configurations with comprehensive error handling, multiple installation strategies, and clear user guidance!
+
+**✅ Service Manager Status**: Successfully starts dashboards and management interface. Individual services start correctly with proper python3 commands and updated file paths.
