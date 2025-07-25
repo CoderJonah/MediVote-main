@@ -92,7 +92,7 @@ class MediVoteBackgroundManager:
         self.service_configs = {
             "backend": {
                 "name": "MediVote Backend",
-                "command": ["python", "backend/main.py"],
+                "command": ["python", "src/backend/main.py"],
                 "port": 8001,
                 "dashboard_port": 8091,
                 "auto_restart": True,
@@ -133,7 +133,7 @@ class MediVoteBackgroundManager:
             },
             "frontend": {
                 "name": "MediVote Frontend",
-                "command": ["python", "frontend/serve.py"],
+                "command": ["python", "src/frontend/serve.py"],
                 "port": 8080,
                 "dashboard_port": 8098,
                 "auto_restart": True,

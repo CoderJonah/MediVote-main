@@ -23,7 +23,7 @@ from pathlib import Path
 import aiohttp
 from aiohttp import web
 
-# Add the backend/core directory to Python path for imports
+# Add the src/backend/core directory to Python path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend', 'core'))
 
 try:

@@ -5,12 +5,12 @@
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
-    "dev:frontend": "cd frontend && npm start",
-    "build": "cd frontend && npm run build",
+    "dev:backend": "cd src/backend && python -m uvicorn main:app --reload --port 8000",
+    "dev:frontend": "cd src/frontend && npm start",
+    "build": "cd src/frontend && npm run build",
     "test": "npm run test:backend && npm run test:frontend",
-    "test:backend": "cd backend && python -m pytest tests/",
-    "test:frontend": "cd frontend && npm test",
+    "test:backend": "cd src/backend && python -m pytest ../tests/",
+    "test:frontend": "cd src/frontend && npm test",
     "setup": "./setup.sh",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"

@@ -441,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{self.config['dashboard']['name']}</title>
-    <link rel="stylesheet" href="/static/style.css">
+                    <link rel="stylesheet" href="/src/shared/static/style.css">
 </head>
 <body>
     <div class="container">
@@ -505,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
     
-    <script src="/static/dashboard.js"></script>
+                    <script src="/src/shared/static/dashboard.js"></script>
 </body>
 </html>
 """

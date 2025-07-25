@@ -75,13 +75,13 @@ def main():
         base_cmd += " -n auto"
     
     # Determine test paths based on test type
-    test_commands = {
-        "all": f"{base_cmd} tests/",
-        "unit": f"{base_cmd} tests/unit/ -m unit",
-        "integration": f"{base_cmd} tests/integration/ -m integration", 
-        "security": f"{base_cmd} tests/security/ -m security",
-        "performance": "python tests/performance/locustfile.py",
-        "cross-platform": "python tests/test_cross_platform.py"
+            test_commands = {
+            "all": f"{base_cmd} .",
+            "unit": f"{base_cmd} unit/ -m unit",
+            "integration": f"{base_cmd} integration/ -m integration",
+            "security": f"{base_cmd} security/ -m security",
+            "performance": "python performance/locustfile.py",
+            "cross-platform": "python test_cross_platform.py"
     }
     
     print("🗳️  MediVote Test Suite Runner")
@@ -92,7 +92,7 @@ def main():
         print("\n⚠️  Performance tests require Locust to be installed:")
         print("   pip install locust")
         print("\n💡 To run performance tests against running backend:")
-        print("   locust -f tests/performance/locustfile.py --host=http://localhost:8000")
+        print("   locust -f performance/locustfile.py --host=http://localhost:8000")
         
         # Just show the locust file content as reference
         success = run_command(test_commands[args.test_type], "Performance Test Reference")

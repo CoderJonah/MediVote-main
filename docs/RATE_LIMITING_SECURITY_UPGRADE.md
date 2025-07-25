@@ -104,7 +104,7 @@ ADMIN_LOGIN: [
 
 ### **File Structure**
 ```
-backend/
+src/backend/
 ├── core/
 │   └── secure_rate_limiter.py    # New secure rate limiting system
 ├── main.py                       # Updated with secure rate limiting

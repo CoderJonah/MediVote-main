@@ -1,4 +1,4 @@
-# backend/core/config.py
+# src/backend/core/config.py
 
 """
 Configuration management for MediVote
@@ -52,7 +52,7 @@ class Settings(BaseModel):
     LOG_FORMATTER_NAME: str = "default"
     
     # Main application entry point  
-    MAIN_APP: str = "backend/main.py"
+    MAIN_APP: str = "src/backend/main.py"
 
 
 class SecurityConfig(BaseModel):

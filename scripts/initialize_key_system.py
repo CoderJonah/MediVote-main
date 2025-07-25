@@ -19,7 +19,10 @@ def main():
     
     try:
         # Import the key integration system
-        from backend.core.key_integration import setup_development_environment
+        import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+from backend.core.key_integration import setup_development_environment
         
         print("Initializing secure key management system...")
         print()

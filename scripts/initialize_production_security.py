@@ -13,7 +13,7 @@ import requests
 import json
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from backend.core.database import Database
 from backend.core.auth_service import AuthenticationService, APIKeyService

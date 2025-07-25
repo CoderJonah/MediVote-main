@@ -114,7 +114,7 @@ This document contains information about cryptographic keys used in the MediVote
 1. **Trusted Setup Ceremony** (Multi-party):
    - Recruit 5+ independent contributors
    - Each generates RSA keypair for participation
-   - Run Powers of Tau ceremony with `backend/core/trusted_setup.py`
+   - Run Powers of Tau ceremony with `src/backend/core/trusted_setup.py`
    - Verify all contributions and generate final parameters
 
 2. **Election Key Generation**:

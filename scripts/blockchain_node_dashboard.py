@@ -130,7 +130,7 @@ class BlockchainNodeDashboard:
         """Setup static file serving"""
         async def static_handler(request):
             path = request.match_info['path']
-            file_path = Path(f"static/{path}")
+            file_path = Path(f"src/shared/static/{path}")
             
             if file_path.exists() and file_path.is_file():
                 return web.FileResponse(file_path)
